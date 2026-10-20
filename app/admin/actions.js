@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/session";
 
 /**
@@ -125,5 +126,88 @@ export async function gantiPassword(prevStateOrFormData, maybeFormData) {
   redirect(
     "/admin/password?sukses=" +
       encodeURIComponent("Password berhasil diperbarui.")
+  );
+}
+
+/**
+ * Server Action untuk menambah produk baru ke database.
+ */
+export async function tambahProduk(prevStateOrFormData, maybeFormData) {
+  const formData =
+    maybeFormData instanceof FormData
+      ? maybeFormData
+      : prevStateOrFormData instanceof FormData
+      ? prevStateOrFormData
+      : null;
+
+  if (!formData) {
+    redirect(
+      "/admin/produk/baru?error=" + encodeURIComponent("Formulir tidak valid.")
+    );
+  }
+
+  const nama = formData.get("nama")?.toString().trim();
+  const hargaRaw = formData.get("harga")?.toString().trim();
+  const kategori = formData.get("kategori")?.toString().trim() || null;
+  const foto_url = formData.get("foto_url")?.toString().trim() || "/produk/kopi.svg";
+  const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+
+  if (!nama) {
+    redirect(
+      "/admin/produk/baru?error=" + encodeURIComponent("Nama produk wajib diisi.")
+    );
+  }
+
+  if (!hargaRaw) {
+    redirect(
+      "/admin/produk/baru?error=" + encodeURIComponent("Harga produk wajib diisi.")
+    );
+  }
+
+  const harga = Number(hargaRaw);
+  if (isNaN(harga) || harga < 0 || !Number.isInteger(harga)) {
+    redirect(
+      "/admin/produk/baru?error=" +
+        encodeURIComponent("Harga harus berupa angka bulat positif.")
+    );
+  }
+
+  const supabase = await createSessionClient();
+
+  // Wajib periksa bahwa admin sudah login di server
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
+    );
+  }
+
+  const { error: insertError } = await supabase.from("produk").insert({
+    nama,
+    harga,
+    kategori,
+    foto_url,
+    deskripsi,
+  });
+
+  if (insertError) {
+    redirect(
+      "/admin/produk/baru?error=" +
+        encodeURIComponent(
+          insertError.message || "Gagal menyimpan produk baru."
+        )
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  redirect(
+    "/admin?sukses=" + encodeURIComponent("Produk berhasil ditambahkan.")
   );
 }

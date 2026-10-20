@@ -91,3 +91,15 @@ Buat halaman daftar produk admin di app/admin/page.jsx yang mengambil semua prod
 **Hasil:**
 
 **Perbaikan:**
+
+## US-08 Tambah produk
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-08.
+
+Buat halaman tambah produk admin di app/admin/produk/baru/page.jsx dengan form (nama, harga, deskripsi, gambar/URL gambar) yang disambungkan ke Server Action di app/admin/actions.js untuk menyimpan produk baru ke tabel "produk" di Supabase, memakai koneksi Supabase yang sudah dibuat di lib/supabase. Validasi di server: nama dan harga wajib diisi, harga berupa angka. Pastikan Server Action memeriksa login admin di server. Setelah berhasil disimpan, arahkan kembali ke /admin dan tampilkan pesan berhasil; kalau gagal, tampilkan pesan error yang jelas di halaman. Jangan ubah tampilan yang sudah ada. Hapus CatatanBelumAktif dari halaman ini.
+
+**Hasil:**
+
+**Perbaikan:**
