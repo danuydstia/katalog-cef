@@ -65,10 +65,22 @@ export default async function HalamanDetailProduk({ params }) {
     produk.status_stok === "habis" ||
     (typeof produk.deskripsi === "string" && /\[habis\]/i.test(produk.deskripsi));
 
-  // US-20: Harga diskon dan badge
+  // US-20: Harga diskon dan badge (bisa dari kolom harga_diskon maupun tag [diskon: 35000] di deskripsi)
+  const diskonDeskripsi =
+    typeof produk.deskripsi === "string"
+      ? produk.deskripsi.match(/\[diskon:\s*(\d+)\]/i)?.[1]
+      : null;
+
+  const hargaDiskon =
+    produk.harga_diskon != null
+      ? Number(produk.harga_diskon)
+      : diskonDeskripsi
+      ? Number(diskonDeskripsi)
+      : null;
+
   const hasDiskon =
-    Boolean(produk.harga_diskon) &&
-    Number(produk.harga_diskon) < Number(produk.harga);
+    Boolean(hargaDiskon) &&
+    hargaDiskon < Number(produk.harga);
 
   const badge =
     produk.badge ||
@@ -77,6 +89,18 @@ export default async function HalamanDetailProduk({ params }) {
       : typeof produk.deskripsi === "string" && /\[terlaris\]/i.test(produk.deskripsi)
       ? "Terlaris"
       : null);
+
+  // Bersihkan tag teknis ([diskon: ...], [baru], [terlaris], [habis]) dari teks deskripsi publik
+  const deskripsiBersih =
+    typeof produk.deskripsi === "string"
+      ? produk.deskripsi
+          .replace(/\[(diskon:\s*\d+|baru|terlaris|habis)\]/gi, "")
+          .trim()
+      : "";
+
+  const produkLengkap = hasDiskon
+    ? { ...produk, harga_diskon: hargaDiskon }
+    : produk;
 
   return (
     <>
@@ -95,8 +119,8 @@ export default async function HalamanDetailProduk({ params }) {
             </Link>
 
             <div className="flex items-center gap-2">
-              <TombolFavorit produk={produk} />
-              <TombolBagikan produk={produk} />
+              <TombolFavorit produk={produkLengkap} />
+              <TombolBagikan produk={produkLengkap} />
             </div>
           </div>
 
@@ -127,7 +151,7 @@ export default async function HalamanDetailProduk({ params }) {
             {hasDiskon ? (
               <>
                 <p className="rounded-md bg-harga-latar px-3 py-1 text-xl font-bold text-harga">
-                  {formatRupiah(produk.harga_diskon)}
+                  {formatRupiah(hargaDiskon)}
                 </p>
                 <p className="text-sm text-teks-lembut line-through">
                   {formatRupiah(produk.harga)}
@@ -140,12 +164,14 @@ export default async function HalamanDetailProduk({ params }) {
             )}
           </div>
 
-          <p className="max-w-prose leading-relaxed text-teks-lembut">
-            {produk.deskripsi}
-          </p>
+          {deskripsiBersih && (
+            <p className="max-w-prose leading-relaxed text-teks-lembut">
+              {deskripsiBersih}
+            </p>
+          )}
 
           {/* Tombol pemesanan WhatsApp, stepper jumlah (US-12), & tambah keranjang (US-21) */}
-          <TombolWhatsApp produk={produk} />
+          <TombolWhatsApp produk={produkLengkap} />
         </div>
       </article>
 

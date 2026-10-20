@@ -9,9 +9,22 @@ export default function KartuProduk({ produk }) {
     produk.status_stok === "habis" ||
     (typeof produk.deskripsi === "string" && /\[habis\]/i.test(produk.deskripsi));
 
+  // Dukungan harga diskon: baik dari kolom harga_diskon maupun tag [diskon: 35000] di deskripsi (US-20)
+  const diskonDeskripsi =
+    typeof produk.deskripsi === "string"
+      ? produk.deskripsi.match(/\[diskon:\s*(\d+)\]/i)?.[1]
+      : null;
+
+  const hargaDiskon =
+    produk.harga_diskon != null
+      ? Number(produk.harga_diskon)
+      : diskonDeskripsi
+      ? Number(diskonDeskripsi)
+      : null;
+
   const hasDiskon =
-    Boolean(produk.harga_diskon) &&
-    Number(produk.harga_diskon) < Number(produk.harga);
+    Boolean(hargaDiskon) &&
+    hargaDiskon < Number(produk.harga);
 
   const badge =
     produk.badge ||
@@ -29,6 +42,10 @@ export default function KartuProduk({ produk }) {
       ? produk.foto_url.split(",")[0].trim()
       : produk.foto_url || "/produk/kopi.svg";
 
+  const produkDiskon = hasDiskon
+    ? { ...produk, harga_diskon: hargaDiskon }
+    : produk;
+
   return (
     <Link
       href={`/produk/${produk.id}`}
@@ -43,7 +60,7 @@ export default function KartuProduk({ produk }) {
 
         {/* Tombol Simpan Favorit (US-24) */}
         <div className="absolute top-2.5 right-2.5 z-10">
-          <TombolFavorit produk={produk} varian="ikon" />
+          <TombolFavorit produk={produkDiskon} varian="ikon" />
         </div>
 
         {/* Badge "Habis" jika stok habis (US-19) */}
@@ -71,7 +88,7 @@ export default function KartuProduk({ produk }) {
             {hasDiskon ? (
               <>
                 <p className="rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
-                  {formatRupiah(produk.harga_diskon)}
+                  {formatRupiah(hargaDiskon)}
                 </p>
                 <span className="text-xs text-teks-lembut line-through">
                   {formatRupiah(produk.harga)}
@@ -87,7 +104,7 @@ export default function KartuProduk({ produk }) {
           {/* Tombol Tambah ke Keranjang cepat (US-21) */}
           {!isHabis && (
             <div className="shrink-0">
-              <TombolTambahKeranjang produk={produk} />
+              <TombolTambahKeranjang produk={produkDiskon} />
             </div>
           )}
         </div>

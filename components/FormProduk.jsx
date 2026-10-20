@@ -68,9 +68,9 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
       />
 
       <Input
-        label="Link foto"
+        label="Link foto (bisa lebih dari 1, pisahkan dengan koma)"
         name="foto_url"
-        placeholder="https://... atau /produk/nama-file.svg"
+        placeholder="/produk/kopi.svg, /produk/keripik.svg, /produk/tas.svg"
         defaultValue={produk.foto_url}
       />
 

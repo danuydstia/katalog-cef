@@ -35,9 +35,22 @@ export default function TombolWhatsApp({ produk }) {
     );
   }
 
-  const hargaSatuan =
-    produk.harga_diskon && Number(produk.harga_diskon) < Number(produk.harga)
+  // Cek harga diskon baik dari kolom harga_diskon maupun dari deskripsi [diskon: 35000]
+  const diskonDeskripsi =
+    typeof produk.deskripsi === "string"
+      ? produk.deskripsi.match(/\[diskon:\s*(\d+)\]/i)?.[1]
+      : null;
+
+  const hargaDiskon =
+    produk.harga_diskon != null
       ? Number(produk.harga_diskon)
+      : diskonDeskripsi
+      ? Number(diskonDeskripsi)
+      : null;
+
+  const hargaSatuan =
+    hargaDiskon && hargaDiskon < Number(produk.harga)
+      ? hargaDiskon
       : Number(produk.harga);
 
   const nomor = toko.nomorWhatsApp ? toko.nomorWhatsApp.replace(/\D/g, "") : "";
@@ -50,7 +63,7 @@ export default function TombolWhatsApp({ produk }) {
   const tautan = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
 
   const handleTambahKeranjang = () => {
-    tambahItem(produk, jumlah);
+    tambahItem({ ...produk, harga_diskon: hargaDiskon }, jumlah);
     setSuksesKeranjang(true);
     setTimeout(() => setSuksesKeranjang(false), 2200);
   };

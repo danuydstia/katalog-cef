@@ -146,6 +146,21 @@ export default function PenyediaAplikasi({ children }) {
         ? produk.foto_url.split(",")[0].trim()
         : produk.foto_url || "/produk/kopi.svg";
 
+    // Hitung diskon dari kolom database atau tag [diskon: 35000]
+    const diskonDeskripsi =
+      typeof produk.deskripsi === "string"
+        ? produk.deskripsi.match(/\[diskon:\s*(\d+)\]/i)?.[1]
+        : null;
+
+    const hargaDiskon =
+      produk.harga_diskon != null
+        ? Number(produk.harga_diskon)
+        : diskonDeskripsi
+        ? Number(diskonDeskripsi)
+        : null;
+
+    const hasDiskon = Boolean(hargaDiskon) && hargaDiskon < Number(produk.harga);
+
     const index = keranjang.findIndex((item) => String(item.id) === String(produk.id));
     let itemsBaru;
 
@@ -162,7 +177,7 @@ export default function PenyediaAplikasi({ children }) {
           id: produk.id,
           nama: produk.nama,
           harga: Number(produk.harga),
-          harga_diskon: produk.harga_diskon ? Number(produk.harga_diskon) : null,
+          harga_diskon: hasDiskon ? hargaDiskon : null,
           kategori: produk.kategori || "",
           foto_url: foto,
           jumlah: qty,
@@ -232,13 +247,27 @@ export default function PenyediaAplikasi({ children }) {
           ? produk.foto_url.split(",")[0].trim()
           : produk.foto_url || "/produk/kopi.svg";
 
+      const diskonDeskripsi =
+        typeof produk.deskripsi === "string"
+          ? produk.deskripsi.match(/\[diskon:\s*(\d+)\]/i)?.[1]
+          : null;
+
+      const hargaDiskon =
+        produk.harga_diskon != null
+          ? Number(produk.harga_diskon)
+          : diskonDeskripsi
+          ? Number(diskonDeskripsi)
+          : null;
+
+      const hasDiskon = Boolean(hargaDiskon) && hargaDiskon < Number(produk.harga);
+
       itemsBaru = [
         ...favorit,
         {
           id: produk.id,
           nama: produk.nama,
           harga: Number(produk.harga),
-          harga_diskon: produk.harga_diskon ? Number(produk.harga_diskon) : null,
+          harga_diskon: hasDiskon ? hargaDiskon : null,
           kategori: produk.kategori || "",
           foto_url: foto,
           stok: produk.stok,
@@ -286,4 +315,3 @@ export default function PenyediaAplikasi({ children }) {
     </TemaContext.Provider>
   );
 }
-

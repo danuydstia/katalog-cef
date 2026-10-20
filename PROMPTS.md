@@ -355,3 +355,4 @@ Dibuat tombol pengalih mode terang/gelap pada header navigasi. Pilihan mode disi
 Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.
 
 Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.
+
