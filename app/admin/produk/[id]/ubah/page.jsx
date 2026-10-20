@@ -3,6 +3,7 @@ import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
 import { ubahProduk } from "@/app/admin/actions";
 import { createServerClient } from "@/lib/supabase/server";
+import { getDaftarKategori } from "@/lib/kategori";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function HalamanUbahProduk({ params, searchParams }) {
   const pesanError = sParams?.error;
 
   let produk = null;
+  const daftarKategori = await getDaftarKategori();
 
   try {
     const supabase = createServerClient();
@@ -45,6 +47,7 @@ export default async function HalamanUbahProduk({ params, searchParams }) {
 
       <FormProduk
         produk={produk}
+        daftarKategori={daftarKategori}
         action={ubahProduk}
         labelTombol="Simpan perubahan"
       />

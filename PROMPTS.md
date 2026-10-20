@@ -423,3 +423,74 @@ Halaman `/admin` diubah menjadi dashboard ringkasan yang menampilkan metrik utam
 
 **Perbaikan:**
 Menata kartu ringkasan kategori dalam grid responsif dengan badge angka produk berpenampilan modern dan kontras tinggi.
+
+
+## US-31 Kelola kategori
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-31.
+
+Buat halaman admin untuk kelola kategori: tambah, ubah nama, hapus. Kategori yang masih dipakai produk ditolak atau ditangani dengan pesan jelas. Daftar kategori di form produk berasal dari data ini. Semua aksi memeriksa login admin di server.
+
+**Hasil:**
+Dibuat halaman `/admin/kategori` untuk mengelola kategori: menambah kategori baru, mengubah nama kategori (otomatis memperbarui seluruh produk terkait), dan menghapus kategori. Jika kategori masih digunakan oleh produk, aksi hapus ditolak dengan pesan peringatan yang jelas. Form tambah dan ubah produk (`FormProduk`) kini mengambil pilihan kategori langsung dari daftar kategori ini. Seluruh aksi Server Action terlindungi oleh verifikasi sesi login admin.
+
+**Perbaikan:**
+Menampilkan badge jumlah produk yang menggunakan masing-masing kategori pada tabel dan mencegah penghapusan kategori yang masih memiliki produk aktif.
+
+## US-32 Aktif atau nonaktifkan produk
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-32.
+
+Tambahkan kolom aktif/nonaktif di produk dan tombol untuk mengubahnya di halaman admin. Produk nonaktif tidak muncul di katalog publik dan halaman detailnya menampilkan "tidak ditemukan". Aksi memeriksa login admin di server.
+
+**Hasil:**
+Ditambahkan tombol pengubah status (Aktif / Nonaktif) pada setiap baris produk di tabel admin melalui Server Action `toggleStatusProduk`. Produk yang berstatus nonaktif otomatis disaring keluar dari katalog publik (`/`) dan jika URL detailnya (`/produk/[id]`) diakses langsung, sistem mengembalikan halaman 404 (`notFound()`). Seluruh aksi memeriksa login admin di server.
+
+**Perbaikan:**
+Menyinkronkan status baik melalui kolom status database maupun tag status deskripsi agar kompatibel dengan seluruh konfigurasi skema tabel.
+
+## US-33 Cari dan paginasi di list admin
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-33.
+
+Tambahkan kolom cari di /admin yang menyaring lewat query database dan paginasi daftar produk. Kata kunci dan nomor halaman disimpan di URL (searchParams) sehingga tetap ada setelah dimuat ulang.
+
+**Hasil:**
+Kolom pencarian nama produk ditambahkan di halaman `/admin` dengan penyaringan langsung di level query database Supabase menggunakan operator `.ilike()`. Daftar produk dibatasi 10 produk per halaman menggunakan `.range()` dengan kontrol paginasi Sebelumnya / Selanjutnya. Kata kunci pencarian dan nomor halaman disimpan di URL (`searchParams`) sehingga tetap bertahan saat halaman dimuat ulang.
+
+**Perbaikan:**
+Menyertakan tombol "Reset" saat pencarian aktif dan mempertahankan kata kunci pencarian dalam setiap perpindahan halaman paginasi.
+
+## US-34 Validasi form admin di server
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-34.
+
+Tambahkan validasi server pada form produk: nama wajib, harga angka positif. Pesan error tampil per field di bawah input yang salah. Nilai yang sudah diisi tidak hilang saat terjadi error.
+
+**Hasil:**
+Validasi server diterapkan pada Server Action `tambahProduk` dan `ubahProduk` menggunakan `useActionState`: nama wajib diisi dan harga harus berupa angka positif. Pesan error ditampilkan per field tepat di bawah input yang salah, dan nilai yang sudah diketik pengguna tidak hilang saat terjadi kesalahan validasi.
+
+**Perbaikan:**
+Menggunakan `useActionState` React 19 / Next.js 16 sehingga feedback validasi tampil instan tanpa me-reload form atau menghilangkan data input lainnya.
+
+## US-35 Ekspor produk ke CSV
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-35.
+
+Buat tombol "Ekspor CSV" yang mengunduh semua produk. CSV dibuat di server (route handler), header dan kolom jelas, karakter khusus (koma, kutip) di-escape dengan benar. Endpoint memeriksa login: tanpa login ditolak.
+
+**Hasil:**
+Dibuat Route Handler di `app/api/admin/ekspor-csv/route.js` yang menghasilkan file CSV dari seluruh data produk di database Supabase lengkap dengan header kolom yang rapi dan escaping karakter khusus (koma, tanda kutip ganda, enter) yang aman. Tombol "Ekspor CSV" ditambahkan di `/admin`. Endpoint memverifikasi sesi login admin di server dan menolak akses dengan respons 401 Unauthorized jika belum login.
+
+**Perbaikan:**
+Menyertakan nama file otomatis berstempel tanggal (misalnya `katalog-produk-2026-10-20.csv`) dan membersihkan tag teknis internal dari deskripsi produk yang diekspor.

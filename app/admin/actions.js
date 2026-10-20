@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/session";
 import { createServerClient } from "@/lib/supabase/server";
+import {
+  tambahKategoriInternal,
+  ubahKategoriInternal,
+  hapusKategoriInternal,
+} from "@/lib/kategori";
 
 /**
  * Server Action untuk memproses login admin.
@@ -200,6 +205,7 @@ async function prosesUploadFoto(fotoFile, errorRedirectPath) {
 
 /**
  * Server Action untuk menambah produk baru ke database.
+ * Mendukung validasi server per-field dan mempertahankan nilai input (US-34).
  */
 export async function tambahProduk(prevStateOrFormData, maybeFormData) {
   const formData =
@@ -210,38 +216,49 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
       : null;
 
   if (!formData) {
-    redirect(
-      "/admin/produk/baru?error=" + encodeURIComponent("Formulir tidak valid.")
-    );
+    return {
+      errors: { general: "Formulir tidak valid." },
+      values: {},
+    };
   }
 
-  const nama = formData.get("nama")?.toString().trim();
-  const hargaRaw = formData.get("harga")?.toString().trim();
+  const nama = formData.get("nama")?.toString().trim() || "";
+  const hargaRaw = formData.get("harga")?.toString().trim() || "";
   const kategori = formData.get("kategori")?.toString().trim() || null;
   const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
   const fotoFile = formData.get("foto_file");
   let foto_url = formData.get("foto_url")?.toString().trim() || "";
 
+  // US-34: Validasi server per field
+  const errors = {};
   if (!nama) {
-    redirect(
-      "/admin/produk/baru?error=" + encodeURIComponent("Nama produk wajib diisi.")
-    );
+    errors.nama = "Nama produk wajib diisi.";
   }
 
   if (!hargaRaw) {
-    redirect(
-      "/admin/produk/baru?error=" + encodeURIComponent("Harga produk wajib diisi.")
-    );
+    errors.harga = "Harga produk wajib diisi.";
+  } else {
+    const hargaNum = Number(hargaRaw);
+    if (isNaN(hargaNum) || hargaNum < 0 || !Number.isInteger(hargaNum)) {
+      errors.harga = "Harga harus berupa angka bulat positif.";
+    }
+  }
+
+  // Jika ada error validasi, kembalikan pesan per-field dan pertahankan nilai input
+  if (Object.keys(errors).length > 0) {
+    return {
+      errors,
+      values: {
+        nama,
+        harga: hargaRaw,
+        kategori,
+        foto_url,
+        deskripsi,
+      },
+    };
   }
 
   const harga = Number(hargaRaw);
-  if (isNaN(harga) || harga < 0 || !Number.isInteger(harga)) {
-    redirect(
-      "/admin/produk/baru?error=" +
-        encodeURIComponent("Harga harus berupa angka bulat positif.")
-    );
-  }
-
   const supabase = await createSessionClient();
 
   // Wajib periksa bahwa admin sudah login di server
@@ -278,12 +295,10 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
   });
 
   if (insertError) {
-    redirect(
-      "/admin/produk/baru?error=" +
-        encodeURIComponent(
-          insertError.message || "Gagal menyimpan produk baru."
-        )
-    );
+    return {
+      errors: { general: insertError.message || "Gagal menyimpan produk baru." },
+      values: { nama, harga: hargaRaw, kategori, foto_url, deskripsi },
+    };
   }
 
   revalidatePath("/");
@@ -296,6 +311,7 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
 
 /**
  * Server Action untuk memperbarui produk di database.
+ * Mendukung validasi server per-field dan mempertahankan nilai input (US-34).
  */
 export async function ubahProduk(prevStateOrFormData, maybeFormData) {
   const formData =
@@ -308,40 +324,50 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
   const id = formData?.get("id")?.toString();
 
   if (!formData || !id) {
-    redirect(
-      "/admin?error=" + encodeURIComponent("ID produk tidak valid.")
-    );
+    return {
+      errors: { general: "ID produk tidak valid." },
+      values: {},
+    };
   }
 
-  const nama = formData.get("nama")?.toString().trim();
-  const hargaRaw = formData.get("harga")?.toString().trim();
+  const nama = formData.get("nama")?.toString().trim() || "";
+  const hargaRaw = formData.get("harga")?.toString().trim() || "";
   const kategori = formData.get("kategori")?.toString().trim() || null;
   const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
   const fotoFile = formData.get("foto_file");
   let foto_url = formData.get("foto_url")?.toString().trim() || "";
 
+  // US-34: Validasi server per field
+  const errors = {};
   if (!nama) {
-    redirect(
-      `/admin/produk/${id}/ubah?error=` +
-        encodeURIComponent("Nama produk wajib diisi.")
-    );
+    errors.nama = "Nama produk wajib diisi.";
   }
 
   if (!hargaRaw) {
-    redirect(
-      `/admin/produk/${id}/ubah?error=` +
-        encodeURIComponent("Harga produk wajib diisi.")
-    );
+    errors.harga = "Harga produk wajib diisi.";
+  } else {
+    const hargaNum = Number(hargaRaw);
+    if (isNaN(hargaNum) || hargaNum < 0 || !Number.isInteger(hargaNum)) {
+      errors.harga = "Harga harus berupa angka bulat positif.";
+    }
+  }
+
+  // Jika ada error validasi, kembalikan pesan per-field dan pertahankan nilai input
+  if (Object.keys(errors).length > 0) {
+    return {
+      errors,
+      values: {
+        id,
+        nama,
+        harga: hargaRaw,
+        kategori,
+        foto_url,
+        deskripsi,
+      },
+    };
   }
 
   const harga = Number(hargaRaw);
-  if (isNaN(harga) || harga < 0 || !Number.isInteger(harga)) {
-    redirect(
-      `/admin/produk/${id}/ubah?error=` +
-        encodeURIComponent("Harga harus berupa angka bulat positif.")
-    );
-  }
-
   const supabase = await createSessionClient();
 
   // Wajib periksa bahwa admin sudah login di server
@@ -381,12 +407,10 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
     .eq("id", id);
 
   if (updateError) {
-    redirect(
-      `/admin/produk/${id}/ubah?error=` +
-        encodeURIComponent(
-          updateError.message || "Gagal memperbarui data produk."
-        )
-    );
+    return {
+      errors: { general: updateError.message || "Gagal memperbarui data produk." },
+      values: { id, nama, harga: hargaRaw, kategori, foto_url, deskripsi },
+    };
   }
 
   revalidatePath("/");
@@ -453,6 +477,167 @@ export async function hapusProduk(prevStateOrFormData, maybeFormData) {
   redirect(
     "/admin?sukses=" + encodeURIComponent("Produk berhasil dihapus.")
   );
+}
+
+/**
+ * Server Action untuk mengaktifkan / menonaktifkan produk (US-32).
+ */
+export async function toggleStatusProduk(formData) {
+  const id = formData?.get("id")?.toString();
+
+  if (!id) {
+    redirect("/admin?error=" + encodeURIComponent("ID produk tidak valid."));
+  }
+
+  const supabase = await createSessionClient();
+
+  // Wajib periksa bahwa admin sudah login di server
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
+    );
+  }
+
+  // Ambil data produk saat ini
+  const { data: produk, error: fetchError } = await supabase
+    .from("produk")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !produk) {
+    redirect("/admin?error=" + encodeURIComponent("Produk tidak ditemukan."));
+  }
+
+  const isCurrentlyNonaktif =
+    produk.aktif === false ||
+    (typeof produk.deskripsi === "string" && /\[nonaktif\]/i.test(produk.deskripsi));
+
+  const newStatus = isCurrentlyNonaktif ? true : false;
+
+  // 1. Coba update kolom aktif jika kolom tersebut ada di database
+  try {
+    await supabase.from("produk").update({ aktif: newStatus }).eq("id", id);
+  } catch {}
+
+  // 2. Sinkronkan tag [nonaktif] di deskripsi agar bekerja di skema database apapun
+  let updatedDeskripsi = produk.deskripsi || "";
+  if (!newStatus) {
+    // Nonaktifkan
+    if (!/\[nonaktif\]/i.test(updatedDeskripsi)) {
+      updatedDeskripsi = `${updatedDeskripsi} [nonaktif]`.trim();
+    }
+  } else {
+    // Aktifkan kembali
+    updatedDeskripsi = updatedDeskripsi.replace(/\[nonaktif\]/gi, "").trim();
+  }
+
+  await supabase
+    .from("produk")
+    .update({ deskripsi: updatedDeskripsi })
+    .eq("id", id);
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/produk/${id}`);
+
+  redirect(
+    "/admin?sukses=" +
+      encodeURIComponent(
+        `Produk "${produk.nama}" berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}.`
+      )
+  );
+}
+
+/**
+ * Server Action: Tambah Kategori (US-31).
+ */
+export async function tambahKategori(formData) {
+  const nama = formData?.get("nama")?.toString().trim();
+
+  if (!nama) {
+    redirect("/admin/kategori?error=" + encodeURIComponent("Nama kategori wajib diisi."));
+  }
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi telah berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await tambahKategoriInternal(nama);
+    revalidatePath("/admin/kategori");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    redirect("/admin/kategori?sukses=" + encodeURIComponent(`Kategori "${nama}" berhasil ditambahkan.`));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/kategori?error=" + encodeURIComponent(err.message || "Gagal menambah kategori."));
+  }
+}
+
+/**
+ * Server Action: Ubah Nama Kategori (US-31).
+ */
+export async function ubahKategori(formData) {
+  const namaLama = formData?.get("namaLama")?.toString().trim();
+  const namaBaru = formData?.get("namaBaru")?.toString().trim();
+
+  if (!namaLama || !namaBaru) {
+    redirect("/admin/kategori?error=" + encodeURIComponent("Nama kategori tidak boleh kosong."));
+  }
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi telah berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await ubahKategoriInternal(namaLama, namaBaru);
+    revalidatePath("/admin/kategori");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    redirect("/admin/kategori?sukses=" + encodeURIComponent(`Kategori "${namaLama}" berhasil diubah menjadi "${namaBaru}".`));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/kategori?error=" + encodeURIComponent(err.message || "Gagal mengubah kategori."));
+  }
+}
+
+/**
+ * Server Action: Hapus Kategori (US-31).
+ */
+export async function hapusKategori(formData) {
+  const nama = formData?.get("nama")?.toString().trim();
+
+  if (!nama) {
+    redirect("/admin/kategori?error=" + encodeURIComponent("Nama kategori tidak valid."));
+  }
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi telah berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await hapusKategoriInternal(nama);
+    revalidatePath("/admin/kategori");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    redirect("/admin/kategori?sukses=" + encodeURIComponent(`Kategori "${nama}" berhasil dihapus.`));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/kategori?error=" + encodeURIComponent(err.message || "Gagal menghapus kategori."));
+  }
 }
 
 /**

@@ -116,6 +116,15 @@ export default async function HalamanDetailProduk({ params }) {
     notFound();
   }
 
+  // US-32: Jika produk nonaktif, tampilkan halaman tidak ditemukan
+  const isNonaktif =
+    produk.aktif === false ||
+    (typeof produk.deskripsi === "string" && /\[nonaktif\]/i.test(produk.deskripsi));
+
+  if (isNonaktif) {
+    notFound();
+  }
+
   // US-18: Dukungan beberapa foto produk (array atau comma-separated)
   const fotoList =
     Array.isArray(produk.foto_urls) && produk.foto_urls.length > 0

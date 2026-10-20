@@ -1,18 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
 import { buatDeskripsiAI } from "@/app/admin/actions";
 
-export default function FormProduk({ produk = {}, labelTombol, action }) {
+export default function FormProduk({
+  produk = {},
+  daftarKategori = [],
+  labelTombol,
+  action,
+}) {
+  const initialData = {
+    errors: {},
+    values: {
+      nama: produk.nama || "",
+      harga: produk.harga ?? "",
+      kategori: produk.kategori || "",
+      foto_url: produk.foto_url || "",
+      deskripsi: produk.deskripsi || "",
+    },
+  };
+
+  const [state, formAction, isPending] = useActionState(action, initialData);
+
   const [nama, setNama] = useState(produk.nama || "");
   const [kategori, setKategori] = useState(produk.kategori || "");
   const [deskripsi, setDeskripsi] = useState(produk.deskripsi || "");
   const [loadingAI, setLoadingAI] = useState(false);
   const [pesanAI, setPesanAI] = useState(null);
-  const [namaFileFoto, setNamaFileFoto] = useState("");
   const [previewFoto, setPreviewFoto] = useState("");
+  const [namaFileFoto, setNamaFileFoto] = useState("");
 
   const handleBuatDeskripsiAI = async () => {
     if (!nama.trim()) {
@@ -53,32 +71,92 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
   };
 
   return (
-    <form action={action} encType="multipart/form-data" className="flex max-w-xl flex-col gap-4">
+    <form
+      action={formAction}
+      encType="multipart/form-data"
+      className="flex max-w-xl flex-col gap-4"
+    >
       {produk.id && <input type="hidden" name="id" value={produk.id} />}
 
-      <Input
-        label="Nama produk"
-        name="nama"
-        value={nama}
-        onChange={(e) => setNama(e.target.value)}
-        required
-      />
+      {/* Pesan Error Umum */}
+      {state?.errors?.general && (
+        <div className="rounded-lg border border-bahaya/30 bg-permukaan p-3 text-sm text-bahaya">
+          {state.errors.general}
+        </div>
+      )}
 
-      <Input
-        label="Harga (Rp)"
-        name="harga"
-        type="number"
-        min="0"
-        defaultValue={produk.harga}
-        required
-      />
+      {/* Input Nama Produk + Validasi Server (US-34) */}
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Nama produk"
+          name="nama"
+          value={nama}
+          defaultValue={state?.values?.nama}
+          onChange={(e) => setNama(e.target.value)}
+          required
+        />
+        {state?.errors?.nama && (
+          <p className="text-xs font-semibold text-bahaya mt-0.5">
+            {state.errors.nama}
+          </p>
+        )}
+      </div>
 
-      <Input
-        label="Kategori"
-        name="kategori"
-        value={kategori}
-        onChange={(e) => setKategori(e.target.value)}
-      />
+      {/* Input Harga Produk + Validasi Server (US-34) */}
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Harga (Rp)"
+          name="harga"
+          type="number"
+          min="0"
+          defaultValue={state?.values?.harga ?? produk.harga ?? ""}
+          required
+        />
+        {state?.errors?.harga && (
+          <p className="text-xs font-semibold text-bahaya mt-0.5">
+            {state.errors.harga}
+          </p>
+        )}
+      </div>
+
+      {/* Pilihan Kategori dari Data Kategori (US-31) */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="input-kategori" className="text-sm font-semibold text-teks">
+          Kategori
+        </label>
+        {daftarKategori && daftarKategori.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <select
+              id="input-kategori"
+              name="kategori"
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+              className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks focus:border-utama focus:outline-none"
+            >
+              <option value="">-- Pilih atau ketik kategori di bawah --</option>
+              {daftarKategori.map((kat) => (
+                <option key={kat} value={kat}>
+                  {kat}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              name="kategori_kustom"
+              placeholder="Atau ketik kategori lain..."
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+              className="w-full rounded-lg border border-garis bg-latar px-3 py-2 text-sm text-teks placeholder:text-teks-lembut focus:border-utama focus:outline-none"
+            />
+          </div>
+        ) : (
+          <Input
+            name="kategori"
+            value={kategori}
+            onChange={(e) => setKategori(e.target.value)}
+          />
+        )}
+      </div>
 
       {/* US-29: Input file foto untuk upload ke Supabase Storage */}
       <div className="flex flex-col gap-1.5">
@@ -113,7 +191,7 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
         label="Atau masukkan Link foto manual (URL)"
         name="foto_url"
         placeholder="/produk/kopi.svg atau https://..."
-        defaultValue={produk.foto_url}
+        defaultValue={state?.values?.foto_url ?? produk.foto_url ?? ""}
       />
 
       <div className="flex flex-col gap-1.5">
@@ -152,7 +230,9 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Tombol type="submit">{labelTombol}</Tombol>
+        <Tombol type="submit" disabled={isPending}>
+          {isPending ? "Menyimpan..." : labelTombol}
+        </Tombol>
         <Tombol href="/admin" varian="garis">
           Batal
         </Tombol>

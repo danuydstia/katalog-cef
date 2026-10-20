@@ -31,8 +31,11 @@ export default async function HalamanKatalog({ searchParams }) {
       ).sort();
     }
 
-    // US-11, US-15, US-16: Bangun query dengan count, filter, urutan, dan range paginasi
+    // US-11, US-15, US-16, US-32: Bangun query dengan count, filter, urutan, dan range paginasi
     let query = supabase.from("produk").select("*", { count: "exact" });
+
+    // US-32: Saring hanya produk aktif di katalog publik
+    query = query.not("deskripsi", "ilike", "%[nonaktif]%");
 
     // Filter pencarian nama produk (US-11)
     if (q) {
