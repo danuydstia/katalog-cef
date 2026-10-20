@@ -6,9 +6,76 @@ import TombolFavorit from "@/components/TombolFavorit";
 import KartuProduk from "@/components/KartuProduk";
 import GaleriProduk from "@/components/GaleriProduk";
 import { formatRupiah } from "@/lib/format";
+import { toko } from "@/lib/toko";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+// US-26: Metadata SEO dan Open Graph dinamis sesuai data produk
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+
+  try {
+    const supabase = createServerClient();
+    const { data: produk } = await supabase
+      .from("produk")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!produk) {
+      return {
+        title: `Produk Tidak Ditemukan - ${toko.nama}`,
+        description: toko.tagline,
+      };
+    }
+
+    const deskripsiBersih =
+      typeof produk.deskripsi === "string"
+        ? produk.deskripsi
+            .replace(/\[(diskon:\s*\d+|baru|terlaris|habis)\]/gi, "")
+            .trim()
+        : "";
+
+    const fotoUtama =
+      Array.isArray(produk.foto_urls) && produk.foto_urls.length > 0
+        ? produk.foto_urls[0]
+        : typeof produk.foto_url === "string" && produk.foto_url.includes(",")
+        ? produk.foto_url.split(",")[0].trim()
+        : produk.foto_url || "/produk/kopi.svg";
+
+    const judul = `${produk.nama} - ${toko.nama}`;
+    const deskripsi =
+      deskripsiBersih || `${produk.nama} tersedia di ${toko.nama}. ${toko.tagline}`;
+
+    return {
+      title: judul,
+      description: deskripsi,
+      openGraph: {
+        title: judul,
+        description: deskripsi,
+        images: [
+          {
+            url: fotoUtama,
+            alt: produk.nama,
+          },
+        ],
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: judul,
+        description: deskripsi,
+        images: [fotoUtama],
+      },
+    };
+  } catch {
+    return {
+      title: `Detail Produk - ${toko.nama}`,
+      description: toko.tagline,
+    };
+  }
+}
 
 export default async function HalamanDetailProduk({ params }) {
   const { id } = await params;

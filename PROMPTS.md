@@ -354,5 +354,72 @@ Dibuat tombol pengalih mode terang/gelap pada header navigasi. Pilihan mode disi
 **Perbaikan:**
 Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.
 
-Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.
+## US-26 Metadata SEO dan Open Graph
 
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-26.
+
+Di halaman detail app/produk/[id]/page.jsx, tambahkan generateMetadata yang memakai judul dan deskripsi sesuai produk, serta Open Graph berisi nama dan foto produk.
+
+**Hasil:**
+Fungsi `generateMetadata` ditambahkan pada `app/produk/[id]/page.jsx`. Judul dan deskripsi meta dihasilkan secara dinamis berdasarkan data produk dari database. Tag Open Graph dan Twitter Card memuat nama produk, deskripsi, serta foto utama produk untuk pratinjau yang optimal saat link produk dibagikan ke media sosial.
+
+**Perbaikan:**
+Membersihkan tag deskripsi teknis (seperti `[diskon: ...]`, `[baru]`, `[habis]`) dari teks deskripsi meta publik.
+
+## US-27 sitemap.xml dan robots.txt
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-27.
+
+Buat sitemap.xml dinamis (app/sitemap.js) dari database yang memuat halaman produk, dan robots.txt (app/robots.js) yang valid dan menunjuk ke sitemap.
+
+**Hasil:**
+Dibuat `app/sitemap.js` yang secara dinamis mengambil seluruh produk dari database Supabase dan memetakan rute halaman statis serta halaman produk dengan `lastModified` dan prioritas yang tepat. Dibuat `app/robots.js` yang mengizinkan pengindeksan publik, memblokir area admin (`/admin`), dan menunjuk langsung ke `sitemap.xml`.
+
+**Perbaikan:**
+Menangani kegagalan koneksi database saat fase build dengan aman agar build produksi tidak gagal jika database sedang tidak dapat dijangkau.
+
+## US-28 Halaman 404 dan loading kustom
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-28.
+
+Buat app/not-found.jsx kustom dengan tautan kembali ke beranda, dan app/loading.jsx atau skeleton di halaman yang mengambil data.
+
+**Hasil:**
+Dibuat halaman `app/not-found.jsx` kustom yang ramah dan konsisten dengan panduan desain, dilengkapi tombol "Kembali ke Katalog". Ditambahkan juga `app/loading.jsx` dan `app/produk/[id]/loading.jsx` dengan animasi efek skeleton loader saat data sedang dimuat dari server.
+
+**Perbaikan:**
+Menyesuaikan struktur skeleton kartu katalog agar presisi dengan grid 2 kolom di HP dan 3 kolom di layar lebar.
+
+## US-29 Upload foto ke Supabase Storage
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-29.
+
+Tambahkan input file foto di form produk. File diunggah ke Supabase Storage dari server (Server Action), kunci tidak ada di browser. URL foto tersimpan di produk dan tampil di katalog. Validasi tipe file (gambar) dan ukuran maksimal dengan pesan error yang jelas. Aksi memeriksa login admin di server.
+
+**Hasil:**
+Form produk di `components/FormProduk.jsx` kini memiliki input file foto dengan pratinjau gambar langsung. File diunggah ke Supabase Storage (bucket `produk`) secara aman dari server melalui Server Action di `app/admin/actions.js` tanpa mengekspos kunci ke browser. Validasi tipe file (wajib berupa gambar) dan ukuran maksimal (maksimal 2 MB) dilakukan di server dengan pesan error yang jelas. Aksi upload terlindungi oleh pemeriksaan login admin di server.
+
+**Perbaikan:**
+Otomatis membuat bucket penyimpanan jika belum ada di Supabase serta mempertahankan opsi input link foto manual.
+
+## US-30 Dashboard ringkasan admin
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-30.
+
+Ubah /admin menjadi dashboard ringkasan: jumlah produk dari database dan jumlah produk per kategori. Halaman hanya bisa dibuka setelah login (dijaga oleh proxy.js).
+
+**Hasil:**
+Halaman `/admin` diubah menjadi dashboard ringkasan yang menampilkan metrik utama toko: kartu jumlah total produk di database, jumlah total kategori, serta rincian distribusi jumlah produk per kategori. Di bawah ringkasan, daftar produk (`TabelProduk`) dan tombol tambah produk tetap tersedia untuk pengelolaan produk. Seluruh halaman admin terlindungi oleh `proxy.js` dan verifikasi sesi login server.
+
+**Perbaikan:**
+Menata kartu ringkasan kategori dalam grid responsif dengan badge angka produk berpenampilan modern dan kontras tinggi.

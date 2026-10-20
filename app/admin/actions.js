@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/session";
+import { createServerClient } from "@/lib/supabase/server";
 
 /**
  * Server Action untuk memproses login admin.
@@ -130,6 +131,74 @@ export async function gantiPassword(prevStateOrFormData, maybeFormData) {
 }
 
 /**
+ * Helper Server-side untuk mengunggah foto ke Supabase Storage (US-29).
+ */
+async function prosesUploadFoto(fotoFile, errorRedirectPath) {
+  if (!fotoFile || typeof fotoFile.size !== "number" || fotoFile.size === 0) {
+    return null;
+  }
+
+  // 1. Validasi tipe file (gambar)
+  if (!fotoFile.type || !fotoFile.type.startsWith("image/")) {
+    redirect(
+      `${errorRedirectPath}${errorRedirectPath.includes("?") ? "&" : "?"}error=` +
+        encodeURIComponent("File yang diunggah harus berupa gambar (JPG, PNG, WebP).")
+    );
+  }
+
+  // 2. Validasi ukuran maksimal (2 MB)
+  const MAX_SIZE = 2 * 1024 * 1024;
+  if (fotoFile.size > MAX_SIZE) {
+    redirect(
+      `${errorRedirectPath}${errorRedirectPath.includes("?") ? "&" : "?"}error=` +
+        encodeURIComponent("Ukuran file foto maksimal 2 MB.")
+    );
+  }
+
+  try {
+    const adminClient = createServerClient();
+    const BUCKET = "produk";
+
+    // Pastikan bucket ada dan bersifat publik
+    const { data: buckets } = await adminClient.storage.listBuckets();
+    const bucketAda = buckets?.some((b) => b.name === BUCKET);
+    if (!bucketAda) {
+      await adminClient.storage.createBucket(BUCKET, { public: true });
+    }
+
+    const ext = fotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+    const namaFile = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const arrayBuffer = await fotoFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const { error: uploadError } = await adminClient.storage
+      .from(BUCKET)
+      .upload(namaFile, buffer, {
+        contentType: fotoFile.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      redirect(
+        `${errorRedirectPath}${errorRedirectPath.includes("?") ? "&" : "?"}error=` +
+          encodeURIComponent(`Gagal mengunggah foto ke storage: ${uploadError.message}`)
+      );
+    }
+
+    const { data: urlData } = adminClient.storage.from(BUCKET).getPublicUrl(namaFile);
+    return urlData.publicUrl;
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    redirect(
+      `${errorRedirectPath}${errorRedirectPath.includes("?") ? "&" : "?"}error=` +
+        encodeURIComponent(`Terjadi kesalahan saat upload foto: ${err?.message || "Storage error"}`)
+    );
+  }
+}
+
+/**
  * Server Action untuk menambah produk baru ke database.
  */
 export async function tambahProduk(prevStateOrFormData, maybeFormData) {
@@ -149,8 +218,9 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
   const nama = formData.get("nama")?.toString().trim();
   const hargaRaw = formData.get("harga")?.toString().trim();
   const kategori = formData.get("kategori")?.toString().trim() || null;
-  const foto_url = formData.get("foto_url")?.toString().trim() || "/produk/kopi.svg";
   const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+  const fotoFile = formData.get("foto_file");
+  let foto_url = formData.get("foto_url")?.toString().trim() || "";
 
   if (!nama) {
     redirect(
@@ -185,6 +255,18 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
       "/admin/login?error=" +
         encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
     );
+  }
+
+  // Proses upload foto jika admin memilih file dari perangkat (US-29)
+  if (fotoFile && typeof fotoFile.size === "number" && fotoFile.size > 0) {
+    const uploadedUrl = await prosesUploadFoto(fotoFile, "/admin/produk/baru");
+    if (uploadedUrl) {
+      foto_url = uploadedUrl;
+    }
+  }
+
+  if (!foto_url) {
+    foto_url = "/produk/kopi.svg";
   }
 
   const { error: insertError } = await supabase.from("produk").insert({
@@ -234,8 +316,9 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
   const nama = formData.get("nama")?.toString().trim();
   const hargaRaw = formData.get("harga")?.toString().trim();
   const kategori = formData.get("kategori")?.toString().trim() || null;
-  const foto_url = formData.get("foto_url")?.toString().trim() || "/produk/kopi.svg";
   const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+  const fotoFile = formData.get("foto_file");
+  let foto_url = formData.get("foto_url")?.toString().trim() || "";
 
   if (!nama) {
     redirect(
@@ -272,6 +355,18 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
       "/admin/login?error=" +
         encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
     );
+  }
+
+  // Proses upload foto jika admin memilih file dari perangkat (US-29)
+  if (fotoFile && typeof fotoFile.size === "number" && fotoFile.size > 0) {
+    const uploadedUrl = await prosesUploadFoto(fotoFile, `/admin/produk/${id}/ubah`);
+    if (uploadedUrl) {
+      foto_url = uploadedUrl;
+    }
+  }
+
+  if (!foto_url) {
+    foto_url = "/produk/kopi.svg";
   }
 
   const { error: updateError } = await supabase
@@ -436,7 +531,6 @@ export async function buatDeskripsiAI(nama, kategori) {
             };
           }
 
-          // Jika model tidak ditemukan atau sudah tidak tersedia, coba model berikutnya
           if (res.status === 404 || lastError?.includes("not found") || lastError?.includes("no longer available")) {
             continue;
           } else {

@@ -11,6 +11,8 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
   const [deskripsi, setDeskripsi] = useState(produk.deskripsi || "");
   const [loadingAI, setLoadingAI] = useState(false);
   const [pesanAI, setPesanAI] = useState(null);
+  const [namaFileFoto, setNamaFileFoto] = useState("");
+  const [previewFoto, setPreviewFoto] = useState("");
 
   const handleBuatDeskripsiAI = async () => {
     if (!nama.trim()) {
@@ -39,8 +41,19 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNamaFileFoto(file.name);
+      setPreviewFoto(URL.createObjectURL(file));
+    } else {
+      setNamaFileFoto("");
+      setPreviewFoto("");
+    }
+  };
+
   return (
-    <form action={action} className="flex max-w-xl flex-col gap-4">
+    <form action={action} encType="multipart/form-data" className="flex max-w-xl flex-col gap-4">
       {produk.id && <input type="hidden" name="id" value={produk.id} />}
 
       <Input
@@ -67,10 +80,39 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
         onChange={(e) => setKategori(e.target.value)}
       />
 
+      {/* US-29: Input file foto untuk upload ke Supabase Storage */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="input-foto-file" className="text-sm font-semibold text-teks">
+          Upload foto dari perangkat (Supabase Storage)
+        </label>
+        <input
+          id="input-foto-file"
+          type="file"
+          name="foto_file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="w-full rounded-lg border border-garis bg-latar px-3 py-2 text-sm text-teks file:mr-3 file:rounded-md file:border-0 file:bg-permukaan file:px-3 file:py-1 file:text-xs file:font-semibold file:text-teks hover:file:bg-garis cursor-pointer"
+        />
+        <p className="text-xs text-teks-lembut">
+          Format: JPG, PNG, WebP (maksimal 2 MB).
+        </p>
+
+        {previewFoto && (
+          <div className="mt-2 flex items-center gap-3 rounded-lg border border-garis bg-permukaan p-2">
+            <img
+              src={previewFoto}
+              alt="Preview foto produk"
+              className="h-16 w-16 rounded-md object-cover border border-garis"
+            />
+            <span className="text-xs text-teks-lembut truncate">{namaFileFoto}</span>
+          </div>
+        )}
+      </div>
+
       <Input
-        label="Link foto (bisa lebih dari 1, pisahkan dengan koma)"
+        label="Atau masukkan Link foto manual (URL)"
         name="foto_url"
-        placeholder="/produk/kopi.svg, /produk/keripik.svg, /produk/tas.svg"
+        placeholder="/produk/kopi.svg atau https://..."
         defaultValue={produk.foto_url}
       />
 
@@ -109,7 +151,7 @@ export default function FormProduk({ produk = {}, labelTombol, action }) {
         />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 pt-2">
         <Tombol type="submit">{labelTombol}</Tombol>
         <Tombol href="/admin" varian="garis">
           Batal
