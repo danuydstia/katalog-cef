@@ -1,12 +1,18 @@
 import Link from "next/link";
-import { toko } from "@/lib/toko";
+import { getPengaturanToko } from "@/lib/pengaturan-toko";
 
-export const metadata = {
-  title: `Tentang Kami - ${toko.nama}`,
-  description: `Profil dan informasi kontak ${toko.nama}. ${toko.tagline}`,
-};
+export const dynamic = "force-dynamic";
 
-export default function HalamanTentang() {
+export async function generateMetadata() {
+  const toko = await getPengaturanToko();
+  return {
+    title: `Tentang Kami - ${toko.nama}`,
+    description: `Profil dan informasi kontak ${toko.nama}. ${toko.tagline}`,
+  };
+}
+
+export default async function HalamanTentang() {
+  const toko = await getPengaturanToko();
   const nomorWaBersih = toko.nomorWhatsApp ? toko.nomorWhatsApp.replace(/\D/g, "") : "";
   const waUrl = `https://wa.me/${nomorWaBersih}?text=${encodeURIComponent(
     `Halo ${toko.nama}, saya ingin bertanya mengenai produk Anda.`

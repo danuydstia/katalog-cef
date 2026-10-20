@@ -5,7 +5,7 @@ import { toko } from "@/lib/toko";
 import { formatRupiah } from "@/lib/format";
 import { useKeranjang } from "@/components/PenyediaAplikasi";
 
-export default function TombolWhatsApp({ produk }) {
+export default function TombolWhatsApp({ produk, nomorWhatsApp }) {
   const [jumlah, setJumlah] = useState(1);
   const [suksesKeranjang, setSuksesKeranjang] = useState(false);
   const { tambahItem } = useKeranjang();
@@ -53,7 +53,8 @@ export default function TombolWhatsApp({ produk }) {
       ? hargaDiskon
       : Number(produk.harga);
 
-  const nomor = toko.nomorWhatsApp ? toko.nomorWhatsApp.replace(/\D/g, "") : "";
+  const waTarget = nomorWhatsApp || toko.nomorWhatsApp;
+  const nomor = waTarget ? waTarget.replace(/\D/g, "") : "";
   const totalHarga = hargaSatuan * jumlah;
   const totalHargaTeks = formatRupiah(totalHarga);
 

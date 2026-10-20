@@ -637,3 +637,72 @@ Dibuat Route Handler `app/api/klik-wa/route.js` dan helper `lib/klik-wa.js` untu
 **Perbaikan:**
 Menggunakan API `sendBeacon` peramban untuk menjamin pengiriman analitik klik tetap berhasil meskipun tab segera beralih ke WhatsApp.
 
+## US-41 Produk terlaris di dashboard
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-41.
+
+Tampilkan 5 produk dengan klik pesan terbanyak di dashboard /admin, dihitung dari tabel pencatatan klik di database. Jika belum ada data, tampilkan pesan yang jelas.
+
+**Hasil:**
+Menambahkan fungsi `getTopProdukKlik(5)` pada `lib/klik-wa.js` yang menghitung agregasi frekuensi klik pesan WhatsApp setiap produk dan mengambil data detail produknya. Di `app/admin/page.jsx`, dibuat kartu dan grid interaktif "5 Produk Paling Sering Dipesan (WhatsApp)" yang memuat peringkat (#1 - #5), nama produk, kategori, harga Rupiah, jumlah klik pesanan WhatsApp, dan tautan langsung untuk melihat produk. Jika belum ada klik, ditampilkan pesan informatif *"Belum ada data pemesanan WhatsApp yang tercatat."*
+
+**Perbaikan:**
+Mengurutkan kembali hasil gabungan dari Supabase dan penyimpanan lokal berdasarkan jumlah klik tertinggi agar peringkat selalu akurat dan tidak melambat saat query.
+
+## US-42 Banner promo di beranda
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-42.
+
+Buat fitur banner promo: admin bisa membuat dan mengubah banner (judul, teks, gambar, tautan) dengan login diperiksa di server. Beranda menampilkan banner aktif dari database. Banner bisa dinonaktifkan dan banner nonaktif tidak tampil.
+
+**Hasil:**
+Membuat halaman kelola banner di `app/admin/banner/page.jsx`, Server Actions (`simpanBannerAction`, `toggleBannerAction`, `hapusBannerAction`) di `app/admin/actions.js`, serta komponen `components/BannerPromo.jsx`. Banner promo dapat diatur judul, teks deskripsi, tautan tujuan, dan status aktif/nonaktifnya. Di halaman beranda `app/page.jsx`, banner yang aktif diambil secara server-side melalui `getBannerAktif()` di `lib/banner.js` dan ditampilkan di bawah judul utama toko. Banner nonaktif otomatis disembunyikan.
+
+**Perbaikan:**
+Menambahkan navigasi "Banner Promo" pada `NavAdmin.jsx` serta validasi hak akses admin di server sebelum menyimpan, mengaktifkan/menonaktifkan, atau menghapus banner.
+
+## US-43 Pengaturan toko dari admin
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-43.
+
+Buat halaman admin pengaturan toko untuk mengubah nama toko, nomor WhatsApp, jam buka, dan alamat, tersimpan di database. Tombol pesan WhatsApp memakai nomor dari pengaturan ini, dengan lib/toko.js sebagai cadangan. Halaman publik (header, footer, tentang) memakai nama dan jam buka dari database. Validasi nomor WhatsApp, dan aksi memeriksa login admin di server.
+
+**Hasil:**
+Membuat halaman `app/admin/pengaturan/page.jsx` dan helper `lib/pengaturan-toko.js` untuk mengelola data identitas toko (nama toko, slogan/tagline, nomor WhatsApp, jam buka operasional, dan alamat). Pengaturan tersimpan secara dinamis dan dipakai di seluruh halaman publik: `Header.jsx`, `Footer.jsx`, `app/page.jsx`, `app/tentang/page.jsx`, `app/keranjang/page.jsx`, dan tombol pemesanan WhatsApp di `TombolWhatsApp.jsx`. Dibuat pula endpoint `app/api/toko/route.js` untuk melayani data toko secara reaktif ke komponen klien. Jika data database belum ada, sistem otomatis menggunakan `lib/toko.js` sebagai fallback cadangan.
+
+**Perbaikan:**
+Menambahkan validasi format nomor WhatsApp minimal 9 digit angka dan pembersihan karakter non-digit agar tautan `https://wa.me/` selalu valid.
+
+## US-44 Kelola akun admin
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-44.
+
+Buat fitur kelola akun admin: admin bisa menambah admin baru lewat Supabase Auth, daftar admin tampil di halaman admin, dan admin bisa menonaktifkan atau menghapus admin lain tetapi tidak akunnya sendiri. Semua aksi diperiksa di server.
+
+**Hasil:**
+Membuat halaman `app/admin/pengguna/page.jsx` dan helper `lib/kelola-admin.js` yang terhubung dengan Supabase Auth Admin API (`admin.listUsers()`, `admin.createUser()`, `admin.deleteUser()`). Admin yang sedang login dapat mendaftarkan admin baru dengan email dan password (minimal 8 karakter), melihat daftar admin aktif beserta waktu terdaftar, dan menghapus admin lain. Sistem memblokir dan menyembunyikan opsi penghapusan akun milik admin yang sedang login untuk mencegah admin mengunci dirinya sendiri di luar sistem.
+
+**Perbaikan:**
+Melindungi fungsi penghapusan admin ganda di level Server Action (`hapusAdminAction`) dan modul internal dengan membandingkan ID admin target dengan ID admin yang sedang login.
+
+## US-45 Log aktivitas admin
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-45.
+
+Catat log setiap tambah, ubah, dan hapus produk: siapa, aksi, dan kapan. Buat halaman admin yang menampilkan 50 log terakhir. Tanpa login log tidak bisa diakses.
+
+**Hasil:**
+Membuat modul pencatatan `lib/log-aktivitas.js` dan halaman `app/admin/log/page.jsx`. Setiap aksi admin saat menambah produk (`tambahProduk`), memperbarui produk (`ubahProduk`), menghapus produk (`hapusProduk`), membuat banner, hingga menyimpan pengaturan toko otomatis dicatat ke riwayat log (mencatat email admin, jenis aksi, detail perubahan, dan stempel waktu). Halaman `/admin/log` menampilkan 50 riwayat aktivitas terakhir dalam tabel rapi lengkap dengan lencana jenis aksi berwarna, dan diproteksi oleh middleware `proxy.js` sehingga tidak dapat diakses tanpa login.
+
+**Perbaikan:**
+Mengintegrasikan pencatatan log di seluruh Server Action penting dengan fallback penyimpanan lokal `lib/log-data.json` agar riwayat tetap tersimpan aman dan tidak gagal jika tabel database belum dibuat.

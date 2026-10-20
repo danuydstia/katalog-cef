@@ -1,11 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
 import { toko } from "@/lib/toko";
 import { useKeranjang } from "@/components/PenyediaAplikasi";
 
 export default function HalamanKeranjang() {
+  const [dataToko, setDataToko] = useState(toko);
+
+  useEffect(() => {
+    fetch("/api/toko")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.nama) setDataToko(data);
+      })
+      .catch(() => {});
+  }, []);
+
   const {
     items,
     ubahJumlah,
@@ -26,7 +38,7 @@ export default function HalamanKeranjang() {
 
   // Format pesan WhatsApp untuk memesan seluruh isi keranjang (US-21)
   const buatTautanWhatsApp = () => {
-    const nomorWa = toko.nomorWhatsApp ? toko.nomorWhatsApp.replace(/\D/g, "") : "";
+    const nomorWa = dataToko.nomorWhatsApp ? dataToko.nomorWhatsApp.replace(/\D/g, "") : "";
 
     const daftarItemTeks = items
       .map((item, index) => {
@@ -39,7 +51,7 @@ export default function HalamanKeranjang() {
       })
       .join("\n");
 
-    const pesan = `Halo ${toko.nama}, saya ingin memesan produk berikut:\n\n${daftarItemTeks}\n\nTotal Pembayaran: ${formatRupiah(
+    const pesan = `Halo ${dataToko.nama}, saya ingin memesan produk berikut:\n\n${daftarItemTeks}\n\nTotal Pembayaran: ${formatRupiah(
       totalHarga
     )}\n\nMohon konfirmasi ketersediaan dan ongkos kirim. Terima kasih!`;
 

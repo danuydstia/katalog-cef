@@ -11,7 +11,7 @@ import FormUlasan from "@/components/FormUlasan";
 import DaftarUlasan from "@/components/DaftarUlasan";
 import { getUlasanProduk } from "@/lib/ulasan";
 import { formatRupiah } from "@/lib/format";
-import { toko } from "@/lib/toko";
+import { getPengaturanToko } from "@/lib/pengaturan-toko";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 // US-26: Metadata SEO dan Open Graph dinamis sesuai data produk
 export async function generateMetadata({ params }) {
   const { id } = await params;
+  const toko = await getPengaturanToko();
 
   try {
     const supabase = createServerClient();
@@ -84,6 +85,7 @@ export async function generateMetadata({ params }) {
 
 export default async function HalamanDetailProduk({ params }) {
   const { id } = await params;
+  const toko = await getPengaturanToko();
 
   let produk = null;
   let produkTerkait = [];
@@ -259,7 +261,7 @@ export default async function HalamanDetailProduk({ params }) {
           )}
 
           {/* Tombol pemesanan WhatsApp, stepper jumlah (US-12), & tambah keranjang (US-21) */}
-          <TombolWhatsApp produk={produkLengkap} />
+          <TombolWhatsApp produk={produkLengkap} nomorWhatsApp={toko.nomorWhatsApp} />
         </div>
       </article>
 

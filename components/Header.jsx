@@ -1,13 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toko } from "@/lib/toko";
 import { useTema, useKeranjang, useFavorit } from "@/components/PenyediaAplikasi";
 
 export default function Header() {
+  const [namaToko, setNamaToko] = useState(toko.nama);
   const { tema, toggleTema } = useTema();
   const { totalItem, dimuat: keranjangDimuat } = useKeranjang();
   const { totalFavorit, dimuat: favoritDimuat } = useFavorit();
+
+  useEffect(() => {
+    fetch("/api/toko")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.nama) setNamaToko(data.nama);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-garis bg-latar/95 backdrop-blur-sm transition-colors">
@@ -16,7 +27,7 @@ export default function Header() {
           href="/"
           className="text-lg font-extrabold tracking-tight text-utama hover:text-utama-gelap transition-colors"
         >
-          {toko.nama}
+          {namaToko}
         </Link>
 
         <nav aria-label="Navigasi utama" className="flex items-center gap-1 sm:gap-2">

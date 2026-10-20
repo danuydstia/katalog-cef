@@ -14,6 +14,14 @@ import {
   toggleStatusUlasanInternal,
   hapusUlasanInternal,
 } from "@/lib/ulasan";
+import {
+  simpanBannerInternal,
+  toggleBannerInternal,
+  hapusBannerInternal,
+} from "@/lib/banner";
+import { simpanPengaturanTokoInternal } from "@/lib/pengaturan-toko";
+import { tambahAdminBaruInternal, hapusAdminInternal } from "@/lib/kelola-admin";
+import { catatLogAktivitas } from "@/lib/log-aktivitas";
 
 /**
  * Server Action untuk memproses login admin.
@@ -306,6 +314,13 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
     };
   }
 
+  // US-45: Catat log aktivitas admin
+  await catatLogAktivitas({
+    user_email: user.email,
+    aksi: "TAMBAH_PRODUK",
+    detail: `Menambahkan produk baru "${nama}" seharga Rp ${harga.toLocaleString("id-ID")}`,
+  });
+
   revalidatePath("/");
   revalidatePath("/admin");
 
@@ -418,6 +433,13 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
     };
   }
 
+  // US-45: Catat log aktivitas admin
+  await catatLogAktivitas({
+    user_email: user.email,
+    aksi: "UBAH_PRODUK",
+    detail: `Mengubah produk "${nama}" (ID: ${id})`,
+  });
+
   revalidatePath("/");
   revalidatePath(`/produk/${id}`);
   revalidatePath("/admin");
@@ -474,6 +496,13 @@ export async function hapusProduk(prevStateOrFormData, maybeFormData) {
         )
     );
   }
+
+  // US-45: Catat log aktivitas admin
+  await catatLogAktivitas({
+    user_email: user.email,
+    aksi: "HAPUS_PRODUK",
+    detail: `Menghapus produk dengan ID: ${id}`,
+  });
 
   revalidatePath("/");
   revalidatePath(`/produk/${id}`);
@@ -832,5 +861,200 @@ export async function hapusUlasan(formData) {
   } catch (err) {
     if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
     redirect("/admin/ulasan?error=" + encodeURIComponent(err?.message || "Gagal menghapus ulasan."));
+  }
+}
+
+/**
+ * Server Action: Simpan / Buat Banner Promo (US-42).
+ */
+export async function simpanBannerAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const judul = formData.get("judul")?.toString().trim();
+  const teks = formData.get("teks")?.toString().trim();
+  const gambar_url = formData.get("gambar_url")?.toString().trim();
+  const tautan = formData.get("tautan")?.toString().trim();
+  const aktif = formData.get("aktif") === "on" || formData.get("aktif") === "true";
+
+  if (!judul) {
+    redirect("/admin/banner?error=" + encodeURIComponent("Judul banner wajib diisi."));
+  }
+
+  try {
+    await simpanBannerInternal({ judul, teks, gambar_url, tautan, aktif });
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "SIMPAN_BANNER",
+      detail: `Membuat banner promo "${judul}"`,
+    });
+    revalidatePath("/");
+    revalidatePath("/admin/banner");
+    redirect("/admin/banner?sukses=" + encodeURIComponent("Banner berhasil disimpan."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/banner?error=" + encodeURIComponent(err?.message || "Gagal menyimpan banner."));
+  }
+}
+
+/**
+ * Server Action: Toggle Status Banner (US-42).
+ */
+export async function toggleBannerAction(formData) {
+  const id = formData.get("id")?.toString();
+  if (!id) redirect("/admin/banner?error=" + encodeURIComponent("ID banner tidak valid."));
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await toggleBannerInternal(id);
+    revalidatePath("/");
+    revalidatePath("/admin/banner");
+    redirect("/admin/banner?sukses=" + encodeURIComponent("Status banner berhasil diperbarui."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/banner?error=" + encodeURIComponent(err?.message || "Gagal mengubah status banner."));
+  }
+}
+
+/**
+ * Server Action: Hapus Banner (US-42).
+ */
+export async function hapusBannerAction(formData) {
+  const id = formData.get("id")?.toString();
+  if (!id) redirect("/admin/banner?error=" + encodeURIComponent("ID banner tidak valid."));
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await hapusBannerInternal(id);
+    revalidatePath("/");
+    revalidatePath("/admin/banner");
+    redirect("/admin/banner?sukses=" + encodeURIComponent("Banner berhasil dihapus."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/banner?error=" + encodeURIComponent(err?.message || "Gagal menghapus banner."));
+  }
+}
+
+/**
+ * Server Action: Simpan Pengaturan Toko (US-43).
+ */
+export async function simpanPengaturanAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const nama = formData.get("nama")?.toString().trim();
+  const tagline = formData.get("tagline")?.toString().trim();
+  const nomorWhatsApp = formData.get("nomorWhatsApp")?.toString().trim();
+  const alamat = formData.get("alamat")?.toString().trim();
+  const jamBuka = formData.get("jamBuka")?.toString().trim();
+
+  if (!nama) {
+    redirect("/admin/pengaturan?error=" + encodeURIComponent("Nama toko wajib diisi."));
+  }
+
+  // Validasi nomor WhatsApp
+  const digits = nomorWhatsApp ? nomorWhatsApp.replace(/\D/g, "") : "";
+  if (!digits || digits.length < 9) {
+    redirect("/admin/pengaturan?error=" + encodeURIComponent("Nomor WhatsApp tidak valid (minimal 9 digit angka)."));
+  }
+
+  try {
+    await simpanPengaturanTokoInternal({
+      nama,
+      tagline,
+      nomorWhatsApp,
+      alamat: alamat || "",
+      jamBuka: jamBuka || "",
+    });
+
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "UBAH_PENGATURAN",
+      detail: `Mengubah data profil toko "${nama}"`,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/tentang");
+    revalidatePath("/admin/pengaturan");
+    redirect("/admin/pengaturan?sukses=" + encodeURIComponent("Pengaturan toko berhasil disimpan."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/pengaturan?error=" + encodeURIComponent(err?.message || "Gagal menyimpan pengaturan."));
+  }
+}
+
+/**
+ * Server Action: Tambah Akun Admin Baru (US-44).
+ */
+export async function tambahAdminAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const email = formData.get("email")?.toString().trim();
+  const password = formData.get("password")?.toString();
+
+  if (!email || !password) {
+    redirect("/admin/pengguna?error=" + encodeURIComponent("Email dan password wajib diisi."));
+  }
+
+  try {
+    await tambahAdminBaruInternal({ email, password });
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "TAMBAH_ADMIN",
+      detail: `Mendaftarkan akun admin baru: ${email}`,
+    });
+    revalidatePath("/admin/pengguna");
+    redirect("/admin/pengguna?sukses=" + encodeURIComponent(`Akun admin ${email} berhasil dibuat.`));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/pengguna?error=" + encodeURIComponent(err?.message || "Gagal membuat akun admin."));
+  }
+}
+
+/**
+ * Server Action: Hapus Akun Admin Lain (US-44).
+ */
+export async function hapusAdminAction(formData) {
+  const targetId = formData.get("id")?.toString();
+  if (!targetId) redirect("/admin/pengguna?error=" + encodeURIComponent("ID admin tidak valid."));
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await hapusAdminInternal(targetId, user.id);
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "HAPUS_ADMIN",
+      detail: `Menghapus akun admin ID: ${targetId}`,
+    });
+    revalidatePath("/admin/pengguna");
+    redirect("/admin/pengguna?sukses=" + encodeURIComponent("Akun admin berhasil dihapus."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/pengguna?error=" + encodeURIComponent(err?.message || "Gagal menghapus akun admin."));
   }
 }

@@ -1,6 +1,8 @@
 import KartuProduk from "@/components/KartuProduk";
 import TerakhirDilihat from "@/components/TerakhirDilihat";
-import { toko } from "@/lib/toko";
+import BannerPromo from "@/components/BannerPromo";
+import { getPengaturanToko } from "@/lib/pengaturan-toko";
+import { getBannerAktif } from "@/lib/banner";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,9 @@ export default async function HalamanKatalog({ searchParams }) {
   const urutan = params?.urutan?.toString().trim() || "";
   const LIMIT = 12; // US-16: 12 produk per halaman (cocok untuk 2 kolom HP dan 3 kolom desktop)
   const page = Math.max(1, parseInt(params?.page || "1", 10));
+
+  const toko = await getPengaturanToko();
+  const banner = await getBannerAktif();
 
   let daftarProduk = [];
   let pesanError = null;
@@ -99,6 +104,9 @@ export default async function HalamanKatalog({ searchParams }) {
         <p className="mt-3 max-w-xl text-lg text-teks-lembut">{toko.tagline}</p>
         <p className="mt-4 text-sm text-teks-lembut">{toko.jamBuka}</p>
       </section>
+
+      {/* US-42: Banner Promo Beranda */}
+      <BannerPromo banner={banner} />
 
       <section aria-labelledby="judul-produk" className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

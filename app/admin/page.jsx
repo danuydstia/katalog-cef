@@ -3,6 +3,8 @@ import TabelProduk from "@/components/TabelProduk";
 import Tombol from "@/components/Tombol";
 import { createServerClient } from "@/lib/supabase/server";
 import { createSessionClient } from "@/lib/supabase/session";
+import { getTopProdukKlik } from "@/lib/klik-wa";
+import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,11 @@ export default async function HalamanAdmin({ searchParams }) {
   let totalFiltered = 0;
   let daftarKategoriRingkasan = [];
   let totalKategori = 0;
+  let topProdukList = [];
+
+  try {
+    topProdukList = await getTopProdukKlik(5);
+  } catch {}
 
   try {
     let supabase;
@@ -182,6 +189,71 @@ export default async function HalamanAdmin({ searchParams }) {
             </div>
           </div>
         )}
+
+        {/* US-41: 5 Produk Paling Sering Dipesan (WhatsApp) */}
+        <div className="rounded-2xl border border-garis bg-permukaan p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <h2 className="text-base font-bold text-teks">
+                5 Produk Paling Sering Dipesan (WhatsApp)
+              </h2>
+              <p className="text-xs text-teks-lembut">
+                Diurutkan berdasarkan jumlah klik tombol pesan WhatsApp oleh pengunjung.
+              </p>
+            </div>
+            <span className="rounded-full bg-utama/10 px-2.5 py-1 text-xs font-bold text-utama">
+              US-41
+            </span>
+          </div>
+
+          {topProdukList.length === 0 ? (
+            <p className="py-4 text-center text-xs text-teks-lembut">
+              Belum ada data pemesanan WhatsApp yang tercatat.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {topProdukList.map((prod, idx) => (
+                <div
+                  key={prod.id}
+                  className="relative flex flex-col justify-between rounded-xl border border-garis bg-latar p-3.5 transition hover:border-utama/40"
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-utama text-[11px] font-extrabold text-white">
+                        #{idx + 1}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771z"/>
+                        </svg>
+                        {prod.jumlahKlik} klik
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-teks line-clamp-2 mt-1" title={prod.nama}>
+                      {prod.nama}
+                    </h3>
+                    <span className="text-xs text-teks-lembut">
+                      {prod.kategori || "Umum"}
+                    </span>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-garis/60 flex items-center justify-between">
+                    <span className="text-xs font-bold text-utama">
+                      {formatRupiah(prod.harga)}
+                    </span>
+                    <a
+                      href={`/produk/${prod.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-semibold text-teks-lembut hover:text-utama"
+                    >
+                      Lihat &rarr;
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Bagian Pengelolaan Produk, Pencarian & Paginasi (US-33), Ekspor CSV (US-35) */}
