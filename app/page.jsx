@@ -1,4 +1,5 @@
 import KartuProduk from "@/components/KartuProduk";
+import TerakhirDilihat from "@/components/TerakhirDilihat";
 import { toko } from "@/lib/toko";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -228,6 +229,9 @@ export default async function HalamanKatalog({ searchParams }) {
           </>
         )}
       </section>
+
+      {/* US-36: Riwayat Terakhir Dilihat */}
+      <TerakhirDilihat />
     </>
   );
 }

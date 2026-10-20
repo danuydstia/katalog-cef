@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
 import TombolFavorit from "@/components/TombolFavorit";
 import TombolTambahKeranjang from "@/components/TombolTambahKeranjang";
+import TombolBandingkan from "@/components/TombolBandingkan";
 
 export default function KartuProduk({ produk }) {
   const isHabis =
@@ -101,12 +102,11 @@ export default function KartuProduk({ produk }) {
             )}
           </div>
 
-          {/* Tombol Tambah ke Keranjang cepat (US-21) */}
-          {!isHabis && (
-            <div className="shrink-0">
-              <TombolTambahKeranjang produk={produkDiskon} />
-            </div>
-          )}
+          {/* Tombol Bandingkan (US-37) & Tambah Keranjang (US-21) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <TombolBandingkan produk={produkDiskon} varian="ikon" />
+            {!isHabis && <TombolTambahKeranjang produk={produkDiskon} />}
+          </div>
         </div>
       </div>
     </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import BarBandingkan from "@/components/BarBandingkan";
 
 // ==========================================
 // 1. TEMA (DARK MODE - US-25)
@@ -49,10 +50,26 @@ export function useFavorit() {
 }
 
 // ==========================================
+// 4. BANDINGKAN 2 PRODUK (US-37)
+// ==========================================
+const BandingkanContext = createContext({
+  daftarBandingkan: [],
+  toggleBandingkan: () => {},
+  hapusBandingkan: () => {},
+  isBandingkan: () => false,
+  kosongkanBandingkan: () => {},
+});
+
+export function useBandingkan() {
+  return useContext(BandingkanContext);
+}
+
+// ==========================================
 // PENYEDIA UTAMA
 // ==========================================
 const STORAGE_KERANJANG = "katalog_keranjang";
 const STORAGE_FAVORIT = "katalog_favorit";
+const STORAGE_BANDINGKAN = "katalog_bandingkan";
 const STORAGE_TEMA = "tema";
 
 export default function PenyediaAplikasi({ children }) {
@@ -66,6 +83,9 @@ export default function PenyediaAplikasi({ children }) {
   // State Favorit
   const [favorit, setFavorit] = useState([]);
   const [favoritDimuat, setFavoritDimuat] = useState(false);
+
+  // State Bandingkan (US-37)
+  const [bandingkan, setBandingkan] = useState([]);
 
   // Inisialisasi dari localStorage setelah mount di browser
   useEffect(() => {
@@ -107,6 +127,14 @@ export default function PenyediaAplikasi({ children }) {
       // Abaikan jika parsing gagal
     }
     setFavoritDimuat(true);
+
+    // 4. Inisialisasi Bandingkan
+    try {
+      const bandingkanDisimpan = localStorage.getItem(STORAGE_BANDINGKAN);
+      if (bandingkanDisimpan) {
+        setBandingkan(JSON.parse(bandingkanDisimpan));
+      }
+    } catch {}
   }, []);
 
   // Handler Tema
@@ -285,6 +313,48 @@ export default function PenyediaAplikasi({ children }) {
     simpanFavorit(itemsBaru);
   };
 
+  // Handler Bandingkan 2 Produk (US-37)
+  const simpanBandingkan = (list) => {
+    setBandingkan(list);
+    try {
+      localStorage.setItem(STORAGE_BANDINGKAN, JSON.stringify(list));
+    } catch {}
+  };
+
+  const isBandingkan = (id) => {
+    return bandingkan.some((item) => String(item.id) === String(id));
+  };
+
+  const toggleBandingkan = (produk) => {
+    if (!produk) return;
+
+    const ada = bandingkan.some((item) => String(item.id) === String(produk.id));
+    if (ada) {
+      // Hapus jika sudah terpilih
+      const baru = bandingkan.filter((item) => String(item.id) !== String(produk.id));
+      simpanBandingkan(baru);
+      return;
+    }
+
+    // US-37: Memilih lebih dari dua ditolak dengan pesan
+    if (bandingkan.length >= 2) {
+      alert("Maksimal membandingkan 2 produk sekaligus. Hapus salah satu produk terlebih dahulu.");
+      return;
+    }
+
+    const baru = [...bandingkan, { id: produk.id, nama: produk.nama }];
+    simpanBandingkan(baru);
+  };
+
+  const hapusBandingkan = (id) => {
+    const baru = bandingkan.filter((item) => String(item.id) !== String(id));
+    simpanBandingkan(baru);
+  };
+
+  const kosongkanBandingkan = () => {
+    simpanBandingkan([]);
+  };
+
   return (
     <TemaContext.Provider value={{ tema, toggleTema }}>
       <KeranjangContext.Provider
@@ -309,7 +379,19 @@ export default function PenyediaAplikasi({ children }) {
             dimuat: favoritDimuat,
           }}
         >
-          {children}
+          <BandingkanContext.Provider
+            value={{
+              daftarBandingkan: bandingkan,
+              toggleBandingkan,
+              hapusBandingkan,
+              isBandingkan,
+              kosongkanBandingkan,
+            }}
+          >
+            {children}
+            {/* Floating Bar Perbandingan Produk (US-37) */}
+            <BarBandingkan />
+          </BandingkanContext.Provider>
         </FavoritContext.Provider>
       </KeranjangContext.Provider>
     </TemaContext.Provider>

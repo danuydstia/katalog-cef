@@ -494,3 +494,146 @@ Dibuat Route Handler di `app/api/admin/ekspor-csv/route.js` yang menghasilkan fi
 
 **Perbaikan:**
 Menyertakan nama file otomatis berstempel tanggal (misalnya `katalog-produk-2026-10-20.csv`) dan membersihkan tag teknis internal dari deskripsi produk yang diekspor.
+
+
+## US-36 Terakhir dilihat
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-36.
+
+Buat fitur produk terakhir dilihat: produk yang dibuka disimpan di browser (localStorage) dengan batas maksimal 6 produk. Tampilkan bagian "Terakhir dilihat" di beranda jika ada riwayat dan tidak muncul bila masih kosong.
+
+**Hasil:**
+Dibuat komponen `CatatTerakhirDilihat` pada halaman detail produk yang otomatis merekam produk yang sedang dilihat ke `localStorage` (maksimal 6 produk terakhir tanpa duplikasi). Komponen `TerakhirDilihat` ditambahkan di bagian bawah beranda katalog yang menampilkan riwayat produk dan otomatis disembunyikan jika riwayat masih kosong.
+
+**Perbaikan:**
+Menambahkan tombol "Hapus riwayat" sehingga pengunjung dapat membersihkan daftar produk terakhir dilihat kapan saja.
+
+## US-37 Bandingkan 2 produk
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-37.
+
+Tambahkan fitur membandingkan dua produk secara berdampingan: tombol pilih bandingkan di kartu dan halaman detail, floating bar pilihan produk, halaman perbandingan `/bandingkan` menampilkan foto, nama, kategori, harga, dan deskripsi berdampingan. Batasi maksimal 2 produk dengan penolakan atau pesan jelas jika memilih lebih dari 2. Tangani produk yang tidak ditemukan dengan pesan yang ramah.
+
+**Hasil:**
+Fitur perbandingan 2 produk berhasil dibuat. Tombol "Bandingkan" tersedia pada setiap kartu produk dan halaman detail. Floating bar di bagian bawah layar muncul saat produk dipilih, menolak pemilihan lebih dari 2 produk dengan peringatan yang jelas. Halaman `/bandingkan` memuat kedua produk secara berdampingan lengkap dengan foto, nama, kategori, harga, deskripsi, dan tombol pesan WhatsApp. Jika salah satu atau kedua produk tidak ditemukan di database, halaman menampilkan pesan informatif.
+
+**Perbaikan:**
+Mengintegrasikan floating bar perbandingan langsung ke dalam `PenyediaAplikasi` agar status pilihan tetap sinkron saat berpindah antar halaman katalog.
+
+## US-38 Ulasan dan rating
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-38.
+
+Tambahkan formulir ulasan (nama, rating 1 sampai 5 bintang, komentar) di halaman detail produk. Simpan ulasan melalui Server Action dengan validasi server dan perlindungan spam dasar (honeypot serta pembatasan panjang karakter). Tampilkan daftar ulasan dan rata-rata rating pembeli di halaman detail.
+
+**Hasil:**
+Formulir ulasan pembeli (`FormUlasan`) dan daftar ulasan (`DaftarUlasan`) ditambahkan ke halaman detail produk. Nilai rating bintang (1-5), nama pengulas, dan teks komentar divalidasi di server melalui Server Action `tambahUlasan`. Perlindungan spam diterapkan menggunakan field jebakan *honeypot* serta batas panjang karakter (nama maks 50 karakter, komentar maks 500 karakter). Rata-rata rating dihitung secara dinamis dan ditampilkan di atas ulasan.
+
+**Perbaikan:**
+Menyediakan penyimpanan data ulasan ganda (Supabase table dan fallback lokal) untuk memastikan ulasan selalu dapat tersimpan dan tampil tanpa dependensi schema manual.
+
+## US-39 Moderasi ulasan di admin
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-39.
+
+Buat halaman moderasi ulasan di `/admin/ulasan` untuk melihat semua ulasan pelanggan. Admin yang sudah login dapat menyembunyikan atau menghapus ulasan yang tidak pantas. Ulasan yang disembunyikan tidak muncul di halaman publik dan tidak dihitung ke rata-rata rating. Semua aksi memeriksa login di server.
+
+**Hasil:**
+Halaman `/admin/ulasan` dibuat untuk menampilkan seluruh ulasan masuk ke admin. Admin dapat menekan tombol "Sembunyikan" / "Tampilkan" untuk menyaring ulasan atau "Hapus" untuk menghapus ulasan secara permanen via Server Actions `toggleStatusUlasan` dan `hapusUlasan`. Ulasan yang berstatus disembunyikan otomatis dikecualikan dari halaman detail produk publik dan tidak dihitung dalam penilaian rata-rata rating.
+
+**Perbaikan:**
+Menambahkan navigasi "Ulasan" pada header admin dan konfirmasi keamanan peramban sebelum menghapus ulasan.
+
+## US-40 Catat klik pesan WhatsApp
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-40.
+
+Catat setiap klik tombol pesan WhatsApp ke database (produk dan waktu) tanpa menghambat atau menunda terbukanya aplikasi WhatsApp. Tidak boleh menyimpan data pribadi pengunjung.
+
+**Hasil:**
+Dibuat Route Handler `app/api/klik-wa/route.js` dan helper `lib/klik-wa.js` untuk mencatat metrik klik pemesanan WhatsApp (hanya ID produk dan stempel waktu, tanpa IP atau data pribadi pengunjung). Tombol pemesanan WhatsApp di `TombolWhatsApp.jsx` mengirimkan sinyal pelacakan menggunakan `navigator.sendBeacon` / `fetch(..., { keepalive: true })` secara *background* sehingga pengguna langsung diarahkan ke aplikasi WhatsApp seketika tanpa jeda.
+
+**Perbaikan:**
+Menggunakan API `sendBeacon` peramban untuk menjamin pengiriman analitik klik tetap berhasil meskipun tab segera beralih ke WhatsApp.
+
+
+## US-36 Terakhir dilihat
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-36.
+
+Buat fitur produk terakhir dilihat: produk yang dibuka disimpan di browser (localStorage) dengan batas maksimal 6 produk. Tampilkan bagian "Terakhir dilihat" di beranda jika ada riwayat dan tidak muncul bila masih kosong.
+
+**Hasil:**
+Dibuat komponen `CatatTerakhirDilihat` pada halaman detail produk yang otomatis merekam produk yang sedang dilihat ke `localStorage` (maksimal 6 produk terakhir tanpa duplikasi). Komponen `TerakhirDilihat` ditambahkan di bagian bawah beranda katalog yang menampilkan riwayat produk dan otomatis disembunyikan jika riwayat masih kosong.
+
+**Perbaikan:**
+Menambahkan tombol "Hapus riwayat" sehingga pengunjung dapat membersihkan daftar produk terakhir dilihat kapan saja.
+
+## US-37 Bandingkan 2 produk
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-37.
+
+Tambahkan fitur membandingkan dua produk secara berdampingan: tombol pilih bandingkan di kartu dan halaman detail, floating bar pilihan produk, halaman perbandingan `/bandingkan` menampilkan foto, nama, kategori, harga, dan deskripsi berdampingan. Batasi maksimal 2 produk dengan penolakan atau pesan jelas jika memilih lebih dari 2. Tangani produk yang tidak ditemukan dengan pesan yang ramah.
+
+**Hasil:**
+Fitur perbandingan 2 produk berhasil dibuat. Tombol "Bandingkan" tersedia pada setiap kartu produk dan halaman detail. Floating bar di bagian bawah layar muncul saat produk dipilih, menolak pemilihan lebih dari 2 produk dengan peringatan yang jelas. Halaman `/bandingkan` memuat kedua produk secara berdampingan lengkap dengan foto, nama, kategori, harga, deskripsi, dan tombol pesan WhatsApp. Jika salah satu atau kedua produk tidak ditemukan di database, halaman menampilkan pesan informatif.
+
+**Perbaikan:**
+Mengintegrasikan floating bar perbandingan langsung ke dalam `PenyediaAplikasi` agar status pilihan tetap sinkron saat berpindah antar halaman katalog.
+
+## US-38 Ulasan dan rating
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-38.
+
+Tambahkan formulir ulasan (nama, rating 1 sampai 5 bintang, komentar) di halaman detail produk. Simpan ulasan melalui Server Action dengan validasi server dan perlindungan spam dasar (honeypot serta pembatasan panjang karakter). Tampilkan daftar ulasan dan rata-rata rating pembeli di halaman detail.
+
+**Hasil:**
+Formulir ulasan pembeli (`FormUlasan`) dan daftar ulasan (`DaftarUlasan`) ditambahkan ke halaman detail produk. Nilai rating bintang (1-5), nama pengulas, dan teks komentar divalidasi di server melalui Server Action `tambahUlasan`. Perlindungan spam diterapkan menggunakan field jebakan *honeypot* serta batas panjang karakter (nama maks 50 karakter, komentar maks 500 karakter). Rata-rata rating dihitung secara dinamis dan ditampilkan di atas ulasan.
+
+**Perbaikan:**
+Menyediakan penyimpanan data ulasan ganda (Supabase table dan fallback lokal) untuk memastikan ulasan selalu dapat tersimpan dan tampil tanpa dependensi schema manual.
+
+## US-39 Moderasi ulasan di admin
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-39.
+
+Buat halaman moderasi ulasan di `/admin/ulasan` untuk melihat semua ulasan pelanggan. Admin yang sudah login dapat menyembunyikan atau menghapus ulasan yang tidak pantas. Ulasan yang disembunyikan tidak muncul di halaman publik dan tidak dihitung ke rata-rata rating. Semua aksi memeriksa login di server.
+
+**Hasil:**
+Halaman `/admin/ulasan` dibuat untuk menampilkan seluruh ulasan masuk ke admin. Admin dapat menekan tombol "Sembunyikan" / "Tampilkan" untuk menyaring ulasan atau "Hapus" untuk menghapus ulasan secara permanen via Server Actions `toggleStatusUlasan` dan `hapusUlasan`. Ulasan yang berstatus disembunyikan otomatis dikecualikan dari halaman detail produk publik dan tidak dihitung dalam penilaian rata-rata rating.
+
+**Perbaikan:**
+Menambahkan navigasi "Ulasan" pada header admin dan konfirmasi keamanan peramban sebelum menghapus ulasan.
+
+## US-40 Catat klik pesan WhatsApp
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-40.
+
+Catat setiap klik tombol pesan WhatsApp ke database (produk dan waktu) tanpa menghambat atau menunda terbukanya aplikasi WhatsApp. Tidak boleh menyimpan data pribadi pengunjung.
+
+**Hasil:**
+Dibuat Route Handler `app/api/klik-wa/route.js` dan helper `lib/klik-wa.js` untuk mencatat metrik klik pemesanan WhatsApp (hanya ID produk dan stempel waktu, tanpa IP atau data pribadi pengunjung). Tombol pemesanan WhatsApp di `TombolWhatsApp.jsx` mengirimkan sinyal pelacakan menggunakan `navigator.sendBeacon` / `fetch(..., { keepalive: true })` secara *background* sehingga pengguna langsung diarahkan ke aplikasi WhatsApp seketika tanpa jeda.
+
+**Perbaikan:**
+Menggunakan API `sendBeacon` peramban untuk menjamin pengiriman analitik klik tetap berhasil meskipun tab segera beralih ke WhatsApp.
+

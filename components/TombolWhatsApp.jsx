@@ -68,6 +68,22 @@ export default function TombolWhatsApp({ produk }) {
     setTimeout(() => setSuksesKeranjang(false), 2200);
   };
 
+  const handleKlikWhatsApp = () => {
+    // US-40: Catat klik pemesanan WhatsApp secara background tanpa menunda navigasi
+    try {
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        navigator.sendBeacon("/api/klik-wa", JSON.stringify({ produkId: produk.id }));
+      } else {
+        fetch("/api/klik-wa", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ produkId: produk.id }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {}
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Pilihan jumlah produk (US-12) */}
@@ -111,12 +127,13 @@ export default function TombolWhatsApp({ produk }) {
         )}
       </div>
 
-      {/* Aksi Pemesanan & Keranjang (US-03, US-12, US-21) */}
+      {/* Aksi Pemesanan & Keranjang (US-03, US-12, US-21, US-40) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <a
           href={tautan}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={handleKlikWhatsApp}
           className="inline-flex w-full items-center justify-center rounded-lg bg-utama px-5 py-3 font-semibold text-white hover:bg-utama-gelap sm:w-auto transition-colors"
         >
           Pesan via WhatsApp

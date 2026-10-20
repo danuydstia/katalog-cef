@@ -11,6 +11,10 @@ export default function NavAdmin() {
       <Link href="/admin/kategori" className="font-semibold hover:text-utama transition-colors">
         Kategori
       </Link>
+      {/* US-39: Navigasi ke Moderasi Ulasan */}
+      <Link href="/admin/ulasan" className="font-semibold hover:text-utama transition-colors">
+        Ulasan
+      </Link>
       <Link href="/admin/password" className="font-semibold hover:text-utama transition-colors">
         Ganti password
       </Link>

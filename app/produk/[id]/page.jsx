@@ -3,8 +3,13 @@ import { notFound } from "next/navigation";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import TombolBagikan from "@/components/TombolBagikan";
 import TombolFavorit from "@/components/TombolFavorit";
+import TombolBandingkan from "@/components/TombolBandingkan";
 import KartuProduk from "@/components/KartuProduk";
 import GaleriProduk from "@/components/GaleriProduk";
+import CatatTerakhirDilihat from "@/components/CatatTerakhirDilihat";
+import FormUlasan from "@/components/FormUlasan";
+import DaftarUlasan from "@/components/DaftarUlasan";
+import { getUlasanProduk } from "@/lib/ulasan";
 import { formatRupiah } from "@/lib/format";
 import { toko } from "@/lib/toko";
 import { createServerClient } from "@/lib/supabase/server";
@@ -125,6 +130,9 @@ export default async function HalamanDetailProduk({ params }) {
     notFound();
   }
 
+  // US-38: Ambil data ulasan publik dan rating rata-rata
+  const ulasanData = await getUlasanProduk(id);
+
   // US-18: Dukungan beberapa foto produk (array atau comma-separated)
   const fotoList =
     Array.isArray(produk.foto_urls) && produk.foto_urls.length > 0
@@ -180,6 +188,9 @@ export default async function HalamanDetailProduk({ params }) {
 
   return (
     <>
+      {/* US-36: Rekam ke riwayat terakhir dilihat */}
+      <CatatTerakhirDilihat produk={produkLengkap} />
+
       <article className="grid gap-8 py-8 md:grid-cols-2 md:py-12">
         {/* US-18: Galeri foto produk */}
         <GaleriProduk fotoList={fotoList} nama={produk.nama} />
@@ -195,6 +206,7 @@ export default async function HalamanDetailProduk({ params }) {
             </Link>
 
             <div className="flex items-center gap-2">
+              <TombolBandingkan produk={produkLengkap} />
               <TombolFavorit produk={produkLengkap} />
               <TombolBagikan produk={produkLengkap} />
             </div>
@@ -273,6 +285,25 @@ export default async function HalamanDetailProduk({ params }) {
           </div>
         </section>
       )}
+      {/* US-38: Ulasan dan Rating Pembeli */}
+      <section
+        aria-labelledby="judul-ulasan"
+        className="border-t border-garis pt-10 mt-8 mb-12 flex flex-col gap-6"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="judul-ulasan" className="text-xl font-bold text-teks">
+            Ulasan & Penilaian Pembeli
+          </h2>
+          <p className="text-sm text-teks-lembut">
+            Penilaian jujur dari pelanggan yang telah memesan produk ini.
+          </p>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-2">
+          <DaftarUlasan ulasanData={ulasanData} />
+          <FormUlasan produkId={id} />
+        </div>
+      </section>
     </>
   );
 }

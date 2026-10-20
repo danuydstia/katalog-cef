@@ -9,6 +9,11 @@ import {
   ubahKategoriInternal,
   hapusKategoriInternal,
 } from "@/lib/kategori";
+import {
+  tambahUlasanInternal,
+  toggleStatusUlasanInternal,
+  hapusUlasanInternal,
+} from "@/lib/ulasan";
 
 /**
  * Server Action untuk memproses login admin.
@@ -736,5 +741,96 @@ export async function buatDeskripsiAI(nama, kategori) {
     return {
       error: err?.message || "Gagal menghubungi layanan Gemini API.",
     };
+  }
+}
+
+/**
+ * Server Action: Tambah Ulasan Pembeli (US-38).
+ * Dilengkapi validasi spam dasar: honeypot dan batas panjang karakter.
+ */
+export async function tambahUlasan(formData) {
+  // 1. Validasi spam honeypot
+  const trap = formData.get("website")?.toString().trim();
+  if (trap) {
+    return { error: "Pengiriman terdeteksi sebagai bot/spam." };
+  }
+
+  const produk_id = formData.get("produk_id")?.toString();
+  const nama = formData.get("nama")?.toString().trim();
+  const ratingRaw = formData.get("rating")?.toString();
+  const komentar = formData.get("komentar")?.toString().trim();
+
+  if (!produk_id) {
+    return { error: "ID produk tidak valid." };
+  }
+
+  if (!nama || nama.length > 50) {
+    return { error: "Nama wajib diisi dan maksimal 50 karakter." };
+  }
+
+  const rating = Number(ratingRaw);
+  if (isNaN(rating) || rating < 1 || rating > 5) {
+    return { error: "Rating harus berupa angka 1 sampai 5." };
+  }
+
+  if (!komentar || komentar.length > 500) {
+    return { error: "Komentar wajib diisi dan maksimal 500 karakter." };
+  }
+
+  try {
+    await tambahUlasanInternal({ produk_id, nama, rating, komentar });
+    revalidatePath(`/produk/${produk_id}`);
+    revalidatePath("/admin/ulasan");
+    return { sukses: true };
+  } catch (err) {
+    return { error: err?.message || "Gagal menyimpan ulasan." };
+  }
+}
+
+/**
+ * Server Action: Moderasi Sembunyikan / Tampilkan Ulasan (US-39).
+ */
+export async function toggleStatusUlasan(formData) {
+  const id = formData.get("id")?.toString();
+  if (!id) redirect("/admin/ulasan?error=" + encodeURIComponent("ID ulasan tidak valid."));
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await toggleStatusUlasanInternal(id);
+    revalidatePath("/admin/ulasan");
+    revalidatePath("/");
+    redirect("/admin/ulasan?sukses=" + encodeURIComponent("Status ulasan berhasil diperbarui."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/ulasan?error=" + encodeURIComponent(err?.message || "Gagal mengubah status ulasan."));
+  }
+}
+
+/**
+ * Server Action: Hapus Ulasan oleh Admin (US-39).
+ */
+export async function hapusUlasan(formData) {
+  const id = formData.get("id")?.toString();
+  if (!id) redirect("/admin/ulasan?error=" + encodeURIComponent("ID ulasan tidak valid."));
+
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  try {
+    await hapusUlasanInternal(id);
+    revalidatePath("/admin/ulasan");
+    revalidatePath("/");
+    redirect("/admin/ulasan?sukses=" + encodeURIComponent("Ulasan berhasil dihapus."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/ulasan?error=" + encodeURIComponent(err?.message || "Gagal menghapus ulasan."));
   }
 }
