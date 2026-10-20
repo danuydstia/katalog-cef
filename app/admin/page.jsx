@@ -40,6 +40,8 @@ export default async function HalamanAdmin({ searchParams }) {
       err?.message || "Gagal memuat daftar produk. Silakan coba beberapa saat lagi.";
   }
 
+  const errorTampil = params?.error || pesanError;
+
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
@@ -54,11 +56,13 @@ export default async function HalamanAdmin({ searchParams }) {
         </div>
       )}
 
-      {pesanError ? (
+      {errorTampil && (
         <div className="rounded-xl border border-bahaya/30 bg-permukaan p-6 text-center">
-          <p className="text-sm font-medium text-bahaya">{pesanError}</p>
+          <p className="text-sm font-medium text-bahaya">{errorTampil}</p>
         </div>
-      ) : daftarProduk.length === 0 ? (
+      )}
+
+      {daftarProduk.length === 0 && !errorTampil ? (
         <p className="py-12 text-center text-teks-lembut">Belum ada produk</p>
       ) : (
         <TabelProduk daftarProduk={daftarProduk} />

@@ -302,3 +302,129 @@ export async function ubahProduk(prevStateOrFormData, maybeFormData) {
     "/admin?sukses=" + encodeURIComponent("Produk berhasil diperbarui.")
   );
 }
+
+/**
+ * Server Action untuk menghapus produk dari database.
+ */
+export async function hapusProduk(prevStateOrFormData, maybeFormData) {
+  const formData =
+    maybeFormData instanceof FormData
+      ? maybeFormData
+      : prevStateOrFormData instanceof FormData
+      ? prevStateOrFormData
+      : null;
+
+  const id = formData?.get("id")?.toString();
+
+  if (!id) {
+    redirect(
+      "/admin?error=" + encodeURIComponent("ID produk tidak valid.")
+    );
+  }
+
+  const supabase = await createSessionClient();
+
+  // Wajib periksa bahwa admin sudah login di server
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
+    );
+  }
+
+  const { error: deleteError } = await supabase
+    .from("produk")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    redirect(
+      "/admin?error=" +
+        encodeURIComponent(
+          deleteError.message || "Gagal menghapus produk."
+        )
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath("/admin");
+
+  redirect(
+    "/admin?sukses=" + encodeURIComponent("Produk berhasil dihapus.")
+  );
+}
+
+/**
+ * Server Action untuk membuat deskripsi produk otomatis memakai Gemini API (US-14).
+ */
+export async function buatDeskripsiAI(nama, kategori) {
+  const supabase = await createSessionClient();
+
+  // Wajib periksa bahwa admin sudah login di server
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Sesi telah berakhir. Silakan login kembali." };
+  }
+
+  if (!nama || !nama.trim()) {
+    return { error: "Nama produk harus diisi terlebih dahulu untuk membuat deskripsi AI." };
+  }
+
+  const apiKey =
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+  if (!apiKey) {
+    return {
+      error:
+        "Kunci GEMINI_API_KEY belum diatur di environment variable (.env.local).",
+    };
+  }
+
+  try {
+    const promptTeks = `Buatkan deskripsi produk yang menarik, singkat, menggugah minat pembeli, dan bernada ramah (1-2 kalimat) untuk produk UMKM dengan nama "${nama.trim()}"${kategori ? ` dalam kategori "${kategori.trim()}"` : ""}. Tuliskan langsung teks deskripsinya saja tanpa tanda kutip dan tanpa pembukaan.`;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptTeks }] }],
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        error: `Gemini API error: ${errData?.error?.message || res.statusText}`,
+      };
+    }
+
+    const data = await res.json();
+    const hasilDeskripsi =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    if (!hasilDeskripsi) {
+      return { error: "AI tidak menghasilkan respons. Silakan coba lagi." };
+    }
+
+    return { deskripsi: hasilDeskripsi };
+  } catch (err) {
+    return {
+      error: err?.message || "Gagal menghubungi layanan Gemini API.",
+    };
+  }
+}
