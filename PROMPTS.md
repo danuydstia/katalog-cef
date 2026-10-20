@@ -775,7 +775,7 @@ Tambahkan kotak tanya di halaman detail produk. Jawaban dari LLM dipanggil dari 
 Membuat Route Handler `app/api/tanya-produk/route.js` dan komponen klien `components/TanyaProdukAI.jsx`. Pengunjung dapat mengajukan pertanyaan tentang produk langsung di halaman detail produk. Jawaban diproses di server menggunakan Google Gemini API (tanpa membocorkan API key ke browser) dengan instruksi sistem ketat agar hanya menjawab sesuai data faktual produk (nama, harga, kategori, deskripsi, dan varian). Dilengkapi tombol rekomendasi pertanyaan cepat, batas panjang pertanyaan (maksimal 200 karakter), penanganan timeout koneksi (10 detik), dan pembatasan frekuensi pengiriman (rate limiting) maksimal 5 pertanyaan per menit per IP untuk mencegah penyalahgunaan.
 
 **Perbaikan:**
-Menambahkan fallback multibahasa dan multi-model Gemini (`gemini-flash-latest`, `gemini-3.8-flash`, `gemini-2.5-flash`, `gemini-1.5-flash`) serta penanganan error yang sopan mengarahkan pembeli ke WhatsApp jika API tidak tersedia.
+Mengoptimalkan urutan model Gemini ke model berkecepatan tinggi (`gemini-flash-lite-latest`, `gemini-3.5-flash-lite`, `gemini-flash-latest`, `gemini-3.5-flash`, `gemini-3.8-flash`) yang merespons cepat (~1 detik), menaikkan batas timeout ke 25 detik, dan menerapkan mekanisme failover otomatis ke model berikutnya jika salah satu model mengalami latensi koneksi.
 
 
 ## K-6 Header keamanan di aplikasi live

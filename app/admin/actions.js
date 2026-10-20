@@ -746,10 +746,11 @@ export async function buatDeskripsiAI(nama, kategori) {
     const promptTeks = `Buatkan deskripsi produk yang menarik, singkat, menggugah minat pembeli, dan bernada ramah (1-2 kalimat) untuk produk UMKM dengan nama "${nama.trim()}"${kategori ? ` dalam kategori "${kategori.trim()}"` : ""}. Tuliskan langsung teks deskripsinya saja tanpa tanda kutip dan tanpa pembukaan.`;
 
     const modelNames = [
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
       "gemini-flash-latest",
+      "gemini-3.5-flash",
       "gemini-3.8-flash",
-      "gemini-2.5-flash",
-      "gemini-1.5-flash",
     ];
 
     let lastError = null;

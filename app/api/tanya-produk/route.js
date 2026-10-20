@@ -145,20 +145,21 @@ PERTANYAAN PENGUNJUNG:
 "${teksPertanyaan}"`;
 
     const modelNames = [
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
       "gemini-flash-latest",
+      "gemini-3.5-flash",
       "gemini-3.8-flash",
-      "gemini-2.5-flash",
-      "gemini-1.5-flash",
     ];
 
     let hasilJawaban = null;
     let lastError = null;
 
-    // Panggil model Gemini dengan timeout 10 detik (US-50)
+    // Panggil model Gemini dengan timeout 25 detik (US-50)
     for (const model of modelNames) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
 
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -181,7 +182,7 @@ PERTANYAAN PENGUNJUNG:
         } else {
           const errData = await res.json().catch(() => ({}));
           lastError = errData?.error?.message || res.statusText;
-          if (res.status === 404 || lastError?.includes("not found")) {
+          if (res.status === 404 || lastError?.includes("not found") || lastError?.includes("no longer available")) {
             continue;
           }
           break;
@@ -189,7 +190,7 @@ PERTANYAAN PENGUNJUNG:
       } catch (err) {
         if (err.name === "AbortError") {
           lastError = "Koneksi ke asisten AI terputus (waktu habis / timeout). Silakan coba lagi.";
-          break;
+          continue;
         }
         lastError = err.message;
       }
