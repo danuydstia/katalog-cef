@@ -103,3 +103,15 @@ Buat halaman tambah produk admin di app/admin/produk/baru/page.jsx dengan form (
 **Hasil:**
 
 **Perbaikan:**
+
+## US-09 Ubah produk
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-09.
+
+Buat halaman ubah produk admin di app/admin/produk/[id]/edit/page.jsx yang mengambil data produk dari tabel "produk" di Supabase berdasarkan id di URL, di sisi server, memakai koneksi Supabase yang sudah dibuat di lib/supabase. Kalau produk tidak ditemukan, panggil notFound(). Isi form (nama, harga, deskripsi, gambar/URL gambar) dengan data produk tersebut. Sambungkan form ke Server Action di app/admin/actions.js untuk memperbarui produk di tabel "produk". Validasi di server: nama dan harga wajib diisi, harga berupa angka. Pastikan Server Action memeriksa login admin di server. Setelah berhasil disimpan, arahkan kembali ke /admin dan tampilkan pesan berhasil; kalau gagal, tampilkan pesan error yang jelas di halaman. Jangan ubah tampilan yang sudah ada. Hapus CatatanBelumAktif dari halaman ini.
+
+**Hasil:**
+
+**Perbaikan:**

@@ -211,3 +211,94 @@ export async function tambahProduk(prevStateOrFormData, maybeFormData) {
     "/admin?sukses=" + encodeURIComponent("Produk berhasil ditambahkan.")
   );
 }
+
+/**
+ * Server Action untuk memperbarui produk di database.
+ */
+export async function ubahProduk(prevStateOrFormData, maybeFormData) {
+  const formData =
+    maybeFormData instanceof FormData
+      ? maybeFormData
+      : prevStateOrFormData instanceof FormData
+      ? prevStateOrFormData
+      : null;
+
+  const id = formData?.get("id")?.toString();
+
+  if (!formData || !id) {
+    redirect(
+      "/admin?error=" + encodeURIComponent("ID produk tidak valid.")
+    );
+  }
+
+  const nama = formData.get("nama")?.toString().trim();
+  const hargaRaw = formData.get("harga")?.toString().trim();
+  const kategori = formData.get("kategori")?.toString().trim() || null;
+  const foto_url = formData.get("foto_url")?.toString().trim() || "/produk/kopi.svg";
+  const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+
+  if (!nama) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent("Nama produk wajib diisi.")
+    );
+  }
+
+  if (!hargaRaw) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent("Harga produk wajib diisi.")
+    );
+  }
+
+  const harga = Number(hargaRaw);
+  if (isNaN(harga) || harga < 0 || !Number.isInteger(harga)) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent("Harga harus berupa angka bulat positif.")
+    );
+  }
+
+  const supabase = await createSessionClient();
+
+  // Wajib periksa bahwa admin sudah login di server
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Sesi telah berakhir. Silakan login kembali.")
+    );
+  }
+
+  const { error: updateError } = await supabase
+    .from("produk")
+    .update({
+      nama,
+      harga,
+      kategori,
+      foto_url,
+      deskripsi,
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent(
+          updateError.message || "Gagal memperbarui data produk."
+        )
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath("/admin");
+
+  redirect(
+    "/admin?sukses=" + encodeURIComponent("Produk berhasil diperbarui.")
+  );
+}
