@@ -1,2 +1,11 @@
-[]
-
+[
+  {
+    "id": "ul_1792481805587_c7csa",
+    "produk_id": 2,
+    "nama": "Danu Yudistia",
+    "rating": 5,
+    "komentar": "enak banget",
+    "status": "ditampilkan",
+    "created_at": "2026-10-20T07:36:45.587Z"
+  }
+]

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createSessionClient } from "@/lib/supabase/session";
 import { createServerClient } from "@/lib/supabase/server";
 import {
@@ -26,10 +27,40 @@ import { parseDanValidasiCsv, simpanProdukImpor } from "@/lib/impor-csv";
 import { geserUrutanProdukInternal } from "@/lib/urutan";
 import { tambahVarianInternal, hapusVarianInternal } from "@/lib/varian";
 
+// Rate limit login admin in-memory: maksimal 10 percobaan per 5 menit per IP (K-12)
+const loginRateLimitMap = new Map();
+
+function periksaRateLimitLogin(ip) {
+  const now = Date.now();
+  const windowMs = 5 * 60 * 1000;
+  const maxRequests = 10;
+
+  const record = loginRateLimitMap.get(ip) || [];
+  const recent = record.filter((t) => now - t < windowMs);
+
+  if (recent.length >= maxRequests) {
+    return false;
+  }
+
+  recent.push(now);
+  loginRateLimitMap.set(ip, recent);
+  return true;
+}
+
 /**
  * Server Action untuk memproses login admin.
  */
 export async function login(prevStateOrFormData, maybeFormData) {
+  const headerList = await headers();
+  const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+
+  if (!periksaRateLimitLogin(ip)) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Terlalu banyak percobaan login. Silakan tunggu beberapa menit sebelum mencoba lagi.")
+    );
+  }
+
   const formData =
     maybeFormData instanceof FormData
       ? maybeFormData
@@ -776,11 +807,37 @@ export async function buatDeskripsiAI(nama, kategori) {
   }
 }
 
+// Rate limit ulasan in-memory: maksimal 5 kiriman per menit per IP (K-12)
+const ulasanRateLimitMap = new Map();
+
+function periksaRateLimitUlasan(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const maxRequests = 5;
+
+  const record = ulasanRateLimitMap.get(ip) || [];
+  const recent = record.filter((t) => now - t < windowMs);
+
+  if (recent.length >= maxRequests) {
+    return false;
+  }
+
+  recent.push(now);
+  ulasanRateLimitMap.set(ip, recent);
+  return true;
+}
+
 /**
  * Server Action: Tambah Ulasan Pembeli (US-38).
- * Dilengkapi validasi spam dasar: honeypot dan batas panjang karakter.
+ * Dilengkapi validasi spam dasar: honeypot, rate limiting (K-12), dan batas panjang karakter.
  */
 export async function tambahUlasan(formData) {
+  const headerList = await headers();
+  const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+  if (!periksaRateLimitUlasan(ip)) {
+    return { error: "Anda terlalu sering mengirim ulasan. Silakan tunggu 1 menit sebelum mengirim lagi." };
+  }
+
   // 1. Validasi spam honeypot
   const trap = formData.get("website")?.toString().trim();
   if (trap) {

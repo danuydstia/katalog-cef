@@ -208,8 +208,9 @@ PERTANYAAN PENGUNJUNG:
 
     return NextResponse.json({ jawaban: hasilJawaban });
   } catch (err) {
+    console.error("[tanya-produk]", err?.message || "Internal server error");
     return NextResponse.json(
-      { error: err?.message || "Terjadi kesalahan pada server asisten AI." },
+      { error: "Terjadi kesalahan pada server asisten AI. Silakan coba lagi." },
       { status: 500 }
     );
   }

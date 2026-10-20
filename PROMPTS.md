@@ -776,3 +776,127 @@ Membuat Route Handler `app/api/tanya-produk/route.js` dan komponen klien `compon
 
 **Perbaikan:**
 Menambahkan fallback multibahasa dan multi-model Gemini (`gemini-flash-latest`, `gemini-3.8-flash`, `gemini-2.5-flash`, `gemini-1.5-flash`) serta penanganan error yang sopan mengarahkan pembeli ke WhatsApp jika API tidak tersedia.
+
+
+## K-6 Header keamanan di aplikasi live
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-6.
+
+Tambahkan header keamanan global untuk semua rute di next.config.js memakai fungsi headers(). Header minimum yang wajib ada: Strict-Transport-Security (max-age minimal 1 tahun, includeSubDomains, preload), X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy: strict-origin-when-cross-origin, dan Permissions-Policy yang mematikan camera, microphone, dan geolocation. Jangan ubah tampilan halaman. Pastikan header muncul saat aplikasi dijalankan di production (next build && next start atau deployment live).
+
+**Hasil:**
+Menambahkan konfigurasi fungsi `headers()` pada `next.config.mjs` untuk rute global `/(.*)`. Header keamanan yang dipasang:
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+
+**Perbaikan:**
+Memastikan seluruh header keamanan diterapkan secara seragam pada seluruh rute aplikasi tanpa mengganggu fungsionalitas dan tampilan halaman.
+
+## K-7 Tanpa dangerouslySetInnerHTML atau eval berbahaya
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-7.
+
+Audit seluruh kode proyek untuk mencari pemakaian dangerouslySetInnerHTML dan eval() (termasuk new Function dan setTimeout/setInterval dengan string). Kalau ditemukan, ganti dengan rendering React biasa, atau kalau memang harus menyisipkan HTML, sanitasi dulu dengan library seperti dompurify di server sebelum dirender. Laporkan hasil audit: file yang diperiksa, temuan, dan perbaikannya. Jangan ubah tampilan yang tidak terkait.
+
+**Hasil:**
+Melakukan audit menyeluruh pada seluruh file di direktori `app/`, `components/`, dan `lib/` terhadap penggunaan `dangerouslySetInnerHTML`, `eval()`, `new Function()`, dan `setTimeout/setInterval` berbasis string. Satu-satunya temuan pada `app/layout.jsx` yang sebelumnya menyisipkan skrip tema via `dangerouslySetInnerHTML` telah digantikan dengan memindahkan logika ke file statis aman `public/init-tema.js` dan dipanggil via tag `<script src="/init-tema.js" />`. Tidak ditemukan pemakaian `eval()` di seluruh basis kode.
+
+**Perbaikan:**
+Memindahkan skrip inline ke `public/init-tema.js` sehingga basis kode 100% bebas dari `dangerouslySetInnerHTML` dan mendukung kebijakan Content-Security-Policy tanpa injeksi skrip sebaris.
+
+## K-8 /admin tidak diindeks mesin pencari
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-8.
+
+Buat app/robots.ts yang memblokir /admin/ dan /api/ untuk semua user agent, dan tetap mengizinkan halaman publik, serta menunjuk ke sitemap. Tambahkan juga metadata robots: { index: false, follow: false, nocache: true } di layout admin (app/admin/layout.jsx atau .tsx) supaya halaman admin mengirim meta robots noindex. Verifikasi dengan membuka /robots.txt dan melihat tag <meta name="robots"> di halaman /admin setelah login. Jangan ubah tampilan.
+
+**Hasil:**
+Memperbarui file `app/robots.js` agar secara eksplisit memblokir path `/admin/` dan `/api/` (`disallow: ["/admin/", "/api/"]`), serta tetap mengizinkan halaman publik (`allow: "/"`) dan menunjuk ke URL sitemap. Membuat layout khusus admin di `app/admin/layout.jsx` dengan metadata `robots: { index: false, follow: false, nocache: true }` untuk menyematkan tag meta `noindex, nofollow` pada seluruh halaman admin.
+
+**Perbaikan:**
+Menerapkan proteksi ganda: melalui aturan perayapan robots.txt peramban dan tag meta robots di tingkat layout App Router admin.
+
+## K-9 Error tidak membocorkan stack trace
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-9.
+
+Pastikan setiap Server Action dan route handler yang bisa gagal mengembalikan pesan error generik ke klien (misalnya "Terjadi kesalahan. Silakan coba lagi.") dan hanya mencatat detail error (stack trace, pesan asli) di log server memakai console.error. Jangan pernah melempar error mentah ke komponen klien, dan jangan mengirim stack trace di response. Audit semua file di app/admin/actions.js dan route handler lain. Verifikasi dengan memicu error (misalnya mengirim input tidak valid) dan memastikan browser hanya menerima pesan generik.
+
+**Hasil:**
+Mengaudit seluruh Server Actions di `app/admin/actions.js` dan Route Handlers di `app/api/**/route.js`. Semua penanganan error mengembalikan pesan informatif generik ke peramban tanpa melempar stack trace atau pesan galat driver database mentah ke antarmuka klien. Detail error internal hanya dicatat di terminal server memakai `console.error`.
+
+**Perbaikan:**
+Memastikan error pengalihan internal Next.js (`NEXT_REDIRECT`) tetap diteruskan tanpa tertelan oleh blok try-catch.
+
+## K-10 Dependensi tanpa kerentanan kritis
+
+**Prompt:**
+
+Baca dokumen penilaian keamanan bagian K-10.
+
+Jalankan npm audit --omit=dev --audit-level=critical untuk memeriksa kerentanan kritis pada dependensi production. Kalau ada, perbarui paket terkait (next, sharp, atau dependensi lain) ke versi patch aman dengan npm install <paket>@latest atau versi yang disarankan audit. Setelah perbaikan, jalankan ulang npm audit dan pastikan tidak ada lagi kerentanan kritis. Laporkan paket yang diperbarui dan hasil audit akhir.
+
+**Hasil:**
+Menjalankan audit dependensi produksi dengan perintah `npm audit --omit=dev --audit-level=critical`. Hasil audit menunjukkan `found 0 vulnerabilities`, membuktikan seluruh dependensi produksi Next.js, Supabase, dan pustaka pendukung berada pada versi aman tanpa celah keamanan berstatus kritis.
+
+**Perbaikan:**
+Mempertahankan dependensi pada versi stabil yang terverifikasi aman dan tidak memasang paket pihak ketiga yang tidak diperlukan.
+
+## K-11 Content-Security-Policy ketat
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-11.
+
+Tambahkan header Content-Security-Policy yang ketat di next.config.js (bisa digabung dengan header K-6). Aturan minimum: default-src 'self'; script-src 'self' (tanpa unsafe-inline dan tanpa unsafe-eval); style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: dan domain Supabase Storage; connect-src 'self' dan domain Supabase (https://*.supabase.co); frame-ancestors 'none'. Sesuaikan domain Supabase dengan SUPABASE_URL dari environment. Pastikan aplikasi tetap berjalan normal: halaman publik, login admin, dan pemanggilan Supabase tidak rusak karena CSP. Verifikasi di browser DevTools → Network → response header ada Content-Security-Policy, dan tidak ada error CSP di Console. Jangan ubah tampilan.
+
+**Hasil:**
+Menambahkan header `Content-Security-Policy` yang ketat pada fungsi `headers()` di `next.config.mjs`:
+`default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
+Domain Supabase disesuaikan secara dinamis dari `SUPABASE_URL`.
+
+**Perbaikan:**
+Mengizinkan domain API Google Gemini (`https://generativelanguage.googleapis.com`) dan Google Fonts pada direktif connect-src, style-src, dan font-src. Pada mode pengembangan lokal (`NODE_ENV !== "production"`), `'unsafe-eval'` diizinkan sementara khusus untuk kebutuhan React dev server / Turbopack callstack source-map debugging, dan otomatis dihilangkan saat aplikasi berjalan di mode produksi live.
+
+## K-12 Rate limit login atau form
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-12.
+
+Untuk login admin: pastikan rate limit Supabase Auth aktif, dan kalau perlu perketat di Dashboard Supabase (Authentication → Rate Limits) dengan batas yang wajar (misalnya sign-in 30 request / 5 menit / IP). Untuk form publik yang bisa disalahgunakan (misalnya form ulasan US-38 atau form kontak), tambahkan rate limit sederhana di Server Action memakai Map in-memory atau library rate-limiter-flexible, dengan key IP pengunjung (ambil dari header x-forwarded-for atau request.ip) dan batas wajar (misalnya 5 kiriman per menit per IP). Kembalikan pesan error yang jelas saat limit tercapai. Jangan ubah tampilan.
+
+**Hasil:**
+Menerapkan mekanisme pembatasan frekuensi pengiriman (rate limiting) berbasis IP pada Server Actions dan Route Handlers:
+1. Login admin di `app/admin/actions.js`: dibatasi maksimal 10 percobaan per 5 menit per IP.
+2. Form ulasan pembeli (`tambahUlasan`): dibatasi maksimal 5 pengiriman per menit per IP.
+3. Tanya jawab asisten AI (`/api/tanya-produk`): dibatasi maksimal 5 pertanyaan per menit per IP.
+Pesan error informatif diberikan saat batas limit tercapai.
+
+**Perbaikan:**
+Memanfaatkan header `x-forwarded-for` untuk mendeteksi IP pengunjung yang berada di balik reverse proxy atau CDN Vercel.
+
+## K-13 Tanpa console.log data sensitif
+
+**Prompt:**
+
+Baca AGENTS.md bagian aturan keamanan dan dokumen penilaian keamanan bagian K-13.
+
+Audit seluruh kode dengan grep untuk semua pemakaian console.log, console.info, dan console.debug. Hapus semua yang tidak perlu. Untuk logging yang memang diperlukan (misalnya error), gunakan console.error dengan pesan deskriptif dan sertakan hanya identifier non-sensitif (misalnya produk id atau error.digest), tanpa mencetak password, token, API key, cookie, atau objek user/session lengkap. Laporkan file yang diperiksa, baris yang dihapus/diubah, dan alasan. Jangan ubah logika aplikasi.
+
+**Hasil:**
+Melakukan audit menyeluruh menggunakan pencarian teks untuk `console.log`, `console.info`, dan `console.debug`. Tidak ada pemanggilan logging data sensitif (password, email, token auth, atau kunci API) yang tertinggal dalam kode. Logging sistem hanya memakai `console.error` pada server untuk kegagalan teknis dengan identifier non-sensitif.
+
+**Perbaikan:**
+Memverifikasi seluruh penanganan error agar hanya mencetak ringkasan pesan error teknis tanpa mencetak objek `user` atau payload sesi autentikasi secara utuh.
