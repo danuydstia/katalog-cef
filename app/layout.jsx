@@ -1,6 +1,7 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PenyediaAplikasi from "@/components/PenyediaAplikasi";
 import { toko } from "@/lib/toko";
 
 export const metadata = {
@@ -15,8 +16,22 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const t = localStorage.getItem('tema');
+                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -24,10 +39,12 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
         />
       </head>
-      <body className="flex min-h-screen flex-col font-sans antialiased">
-        <Header />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
-        <Footer />
+      <body className="flex min-h-screen flex-col font-sans antialiased bg-latar text-teks">
+        <PenyediaAplikasi>
+          <Header />
+          <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
+          <Footer />
+        </PenyediaAplikasi>
       </body>
     </html>
   );

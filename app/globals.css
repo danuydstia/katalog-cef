@@ -25,6 +25,25 @@
 html {
   color: var(--color-teks);
   background: var(--color-latar);
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --color-latar: #121815;
+  --color-permukaan: #1a231f;
+  --color-garis: #2a3931;
+  --color-teks: #e9f0ec;
+  --color-teks-lembut: #9ab0a5;
+
+  --color-utama: #2bb381;
+  --color-utama-gelap: #23946a;
+
+  --color-harga: #fde047;
+  --color-harga-latar: #3b2803;
+
+  --color-bahaya: #f87171;
 }
 
 :focus-visible {

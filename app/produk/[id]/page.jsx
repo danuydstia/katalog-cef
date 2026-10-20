@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
+import TombolBagikan from "@/components/TombolBagikan";
+import TombolFavorit from "@/components/TombolFavorit";
 import KartuProduk from "@/components/KartuProduk";
 import GaleriProduk from "@/components/GaleriProduk";
 import { formatRupiah } from "@/lib/format";
@@ -83,12 +85,20 @@ export default async function HalamanDetailProduk({ params }) {
         <GaleriProduk fotoList={fotoList} nama={produk.nama} />
 
         <div className="flex flex-col gap-4">
-          <Link
-            href="/"
-            className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama"
-          >
-            Kembali ke katalog
-          </Link>
+          {/* Baris Navigasi & Aksi: Kembali, Favorit (US-24), Bagikan (US-23) */}
+          <div className="flex items-center justify-between gap-2">
+            <Link
+              href="/"
+              className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama transition-colors"
+            >
+              &larr; Kembali ke katalog
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <TombolFavorit produk={produk} />
+              <TombolBagikan produk={produk} />
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-teks-lembut">{produk.kategori}</span>
@@ -108,7 +118,7 @@ export default async function HalamanDetailProduk({ params }) {
             )}
           </div>
 
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight">
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-teks">
             {produk.nama}
           </h1>
 
@@ -134,7 +144,7 @@ export default async function HalamanDetailProduk({ params }) {
             {produk.deskripsi}
           </p>
 
-          {/* Tombol pemesanan via WhatsApp & pemilihan jumlah (US-12 & US-19) */}
+          {/* Tombol pemesanan WhatsApp, stepper jumlah (US-12), & tambah keranjang (US-21) */}
           <TombolWhatsApp produk={produk} />
         </div>
       </article>
@@ -146,7 +156,7 @@ export default async function HalamanDetailProduk({ params }) {
           className="border-t border-garis pt-10 mt-8 mb-12 flex flex-col gap-5"
         >
           <div className="flex items-center justify-between">
-            <h2 id="judul-terkait" className="text-xl font-bold">
+            <h2 id="judul-terkait" className="text-xl font-bold text-teks">
               Produk terkait
             </h2>
             <span className="text-sm text-teks-lembut">

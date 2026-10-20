@@ -283,3 +283,75 @@ Dukungan harga diskon (`harga_diskon`) dan badge (*"Baru"* / *"Terlaris"*) ditam
 
 **Perbaikan:**
 Perhitungan total harga pada pemesanan WhatsApp otomatis memakai harga diskon yang aktif.
+
+## US-21 Keranjang, pesan semua via WhatsApp
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-21.
+
+Tambahkan fitur keranjang: tombol "Tambah ke keranjang" di kartu atau halaman detail, halaman keranjang yang bisa mengubah jumlah dan menghapus item dengan total harga benar, isi keranjang bertahan saat pindah halaman (localStorage), dan satu tombol untuk mengirim seluruh isi keranjang dalam satu pesan WhatsApp ke nomor di lib/toko.js.
+
+**Hasil:**
+Fitur keranjang belanja berhasil dibuat menggunakan React Context dan `localStorage` agar isi keranjang bertahan saat berpindah halaman. Tombol "Tambah ke Keranjang" tersedia pada kartu produk dan halaman detail produk. Halaman `/keranjang` menyediakan pengubah jumlah item (`-` dan `+`), tombol hapus item, perhitungan total harga dalam format Rupiah, serta tombol "Pesan Semua via WhatsApp" yang merangkum seluruh pesanan ke dalam satu pesan WhatsApp ke nomor di `lib/toko.js`.
+
+**Perbaikan:**
+Menambahkan badge counter jumlah produk pada ikon keranjang di header navigasi yang terbarui secara instan.
+
+## US-22 Halaman Tentang dan kontak toko
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-22.
+
+Buat halaman /tentang berisi profil toko, alamat, jam buka, dan kontak. Tautkan halaman ini dari navigasi atau footer. Jangan ubah tampilan halaman lain.
+
+**Hasil:**
+Halaman `/tentang` berhasil dibuat memuat profil usaha, jam operasional, alamat lengkap, dan nomor kontak resmi dari `lib/toko.js`. Tautan ke halaman ini ditambahkan pada header navigasi dan footer aplikasi tanpa mengubah tata letak halaman lain.
+
+**Perbaikan:**
+Menyediakan tombol interaktif "Chat via WhatsApp" langsung pada bagian kontak halaman `/tentang` untuk memudahkan pembeli menghubungi pemilik toko.
+
+## US-23 Bagikan atau salin link produk
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-23.
+
+Tambahkan tombol bagikan atau salin link di halaman detail produk memakai Web Share API (kalau tersedia) atau clipboard. Tampilkan umpan balik setelah ditekan, misalnya "Link tersalin".
+
+**Hasil:**
+Komponen `TombolBagikan` ditambahkan pada halaman detail produk `app/produk/[id]/page.jsx`. Tombol memanfaatkan Web Share API jika didukung oleh peramban pengguna, dan otomatis menggunakan `navigator.clipboard` sebagai fallback jika tidak tersedia. Umpan balik visual "Link tersalin!" atau "Berhasil dibagikan!" tampil selama 2,5 detik setelah tombol ditekan.
+
+**Perbaikan:**
+Menangani pembatalan dialog share (`AbortError`) dengan aman tanpa memicu error atau menampilkan peringatan kegagalan yang tidak perlu.
+
+## US-24 Favorit tersimpan di browser
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-24.
+
+Tambahkan tombol favorit di kartu atau halaman detail. Favorit disimpan di browser (localStorage) dan bertahan setelah halaman dimuat ulang. Sediakan tampilan/halaman yang hanya berisi produk favorit.
+
+**Hasil:**
+Fitur penanda produk favorit dibuat menggunakan `localStorage` browser dan dapat diakses dari tombol hati pada setiap `KartuProduk` maupun halaman detail produk. Halaman khusus `/favorit` dibuat untuk menampilkan daftar produk yang ditandai favorit secara responsif, lengkap dengan informasi jumlah favorit di header.
+
+**Perbaikan:**
+Mencegah navigasi kartu (`e.preventDefault()` & `e.stopPropagation()`) saat pengunjung mengeklik ikon favorit pada kartu produk di katalog.
+
+## US-25 Mode gelap
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-25.
+
+Tambahkan tombol berpindah mode terang/gelap. Pilihan disimpan di browser dan diingat setelah halaman dimuat ulang. Pastikan semua teks tetap terbaca di kedua mode.
+
+**Hasil:**
+Dibuat tombol pengalih mode terang/gelap pada header navigasi. Pilihan mode disimpan di `localStorage` dan dipertahankan saat halaman dimuat ulang. Seluruh token warna di `app/globals.css` disesuaikan untuk mode gelap (`html.dark`) guna menjamin keterbacaan teks dan kontras yang optimal di kedua mode.
+
+**Perbaikan:**
+Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.
+
+Menambahkan skrip inisialisasi tema inline pada elemen `<head>` di `app/layout.jsx` untuk mencegah efek kedipan warna putih (*flash of unstyled content / FOUC*) saat memuat ulang halaman dalam mode gelap.

@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { toko } from "@/lib/toko";
 import { formatRupiah } from "@/lib/format";
+import { useKeranjang } from "@/components/PenyediaAplikasi";
 
 export default function TombolWhatsApp({ produk }) {
   const [jumlah, setJumlah] = useState(1);
+  const [suksesKeranjang, setSuksesKeranjang] = useState(false);
+  const { tambahItem } = useKeranjang();
 
   if (!produk) return null;
 
@@ -14,7 +17,7 @@ export default function TombolWhatsApp({ produk }) {
     produk.status_stok === "habis" ||
     (typeof produk.deskripsi === "string" && /\[habis\]/i.test(produk.deskripsi));
 
-  // Jika stok habis, nonaktifkan tombol WhatsApp (US-19)
+  // Jika stok habis, nonaktifkan tombol WhatsApp dan keranjang (US-19)
   if (isHabis) {
     return (
       <div className="flex flex-col gap-2">
@@ -46,6 +49,12 @@ export default function TombolWhatsApp({ produk }) {
   const pesan = `Halo, saya ingin memesan ${namaPesan} seharga ${totalHargaTeks}.`;
   const tautan = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
 
+  const handleTambahKeranjang = () => {
+    tambahItem(produk, jumlah);
+    setSuksesKeranjang(true);
+    setTimeout(() => setSuksesKeranjang(false), 2200);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Pilihan jumlah produk (US-12) */}
@@ -57,7 +66,7 @@ export default function TombolWhatsApp({ produk }) {
           <button
             type="button"
             onClick={() => setJumlah((prev) => Math.max(1, prev - 1))}
-            className="rounded-l-lg px-3 py-1.5 text-base font-bold text-teks hover:bg-permukaan focus:outline-none"
+            className="rounded-l-lg px-3 py-1.5 text-base font-bold text-teks hover:bg-permukaan focus:outline-none transition-colors"
             aria-label="Kurangi jumlah"
           >
             -
@@ -71,12 +80,12 @@ export default function TombolWhatsApp({ produk }) {
               const val = parseInt(e.target.value, 10);
               setJumlah(isNaN(val) || val < 1 ? 1 : val);
             }}
-            className="w-14 text-center text-sm font-semibold text-teks focus:outline-none"
+            className="w-14 text-center text-sm font-semibold text-teks focus:outline-none bg-transparent"
           />
           <button
             type="button"
             onClick={() => setJumlah((prev) => prev + 1)}
-            className="rounded-r-lg px-3 py-1.5 text-base font-bold text-teks hover:bg-permukaan focus:outline-none"
+            className="rounded-r-lg px-3 py-1.5 text-base font-bold text-teks hover:bg-permukaan focus:outline-none transition-colors"
             aria-label="Tambah jumlah"
           >
             +
@@ -89,14 +98,40 @@ export default function TombolWhatsApp({ produk }) {
         )}
       </div>
 
-      <a
-        href={tautan}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex w-full items-center justify-center rounded-lg bg-utama px-5 py-3 font-semibold text-white hover:bg-utama-gelap sm:w-auto"
-      >
-        Pesan via WhatsApp
-      </a>
+      {/* Aksi Pemesanan & Keranjang (US-03, US-12, US-21) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <a
+          href={tautan}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-utama px-5 py-3 font-semibold text-white hover:bg-utama-gelap sm:w-auto transition-colors"
+        >
+          Pesan via WhatsApp
+        </a>
+
+        {/* US-21: Tambah ke Keranjang */}
+        <button
+          type="button"
+          onClick={handleTambahKeranjang}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-garis bg-latar px-5 py-3 font-semibold text-teks hover:border-utama hover:text-utama sm:w-auto transition-colors"
+        >
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          <span>{suksesKeranjang ? "✓ Berhasil Ditambahkan" : "Tambah ke Keranjang"}</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
+import TombolFavorit from "@/components/TombolFavorit";
+import TombolTambahKeranjang from "@/components/TombolTambahKeranjang";
 
 export default function KartuProduk({ produk }) {
   const isHabis =
@@ -30,7 +32,7 @@ export default function KartuProduk({ produk }) {
   return (
     <Link
       href={`/produk/${produk.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-garis bg-latar"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-garis bg-latar transition-colors"
     >
       <div className="relative aspect-square w-full bg-permukaan overflow-hidden">
         <img
@@ -39,9 +41,14 @@ export default function KartuProduk({ produk }) {
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
 
+        {/* Tombol Simpan Favorit (US-24) */}
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <TombolFavorit produk={produk} varian="ikon" />
+        </div>
+
         {/* Badge "Habis" jika stok habis (US-19) */}
         {isHabis ? (
-          <span className="absolute top-2.5 right-2.5 rounded-md bg-bahaya px-2 py-0.5 text-xs font-bold text-white shadow-sm">
+          <span className="absolute top-2.5 left-2.5 rounded-md bg-bahaya px-2 py-0.5 text-xs font-bold text-white shadow-sm">
             Habis
           </span>
         ) : badge ? (
@@ -54,25 +61,34 @@ export default function KartuProduk({ produk }) {
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <p className="text-xs text-teks-lembut">{produk.kategori}</p>
-        <h3 className="font-semibold leading-snug group-hover:text-utama line-clamp-2">
+        <h3 className="font-semibold leading-snug group-hover:text-utama line-clamp-2 transition-colors">
           {produk.nama}
         </h3>
 
-        <div className="mt-auto pt-2 flex flex-wrap items-baseline gap-1.5">
-          {/* Harga coret jika ada diskon (US-20) */}
-          {hasDiskon ? (
-            <>
+        <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
+          <div className="flex flex-wrap items-baseline gap-1.5">
+            {/* Harga coret jika ada diskon (US-20) */}
+            {hasDiskon ? (
+              <>
+                <p className="rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
+                  {formatRupiah(produk.harga_diskon)}
+                </p>
+                <span className="text-xs text-teks-lembut line-through">
+                  {formatRupiah(produk.harga)}
+                </span>
+              </>
+            ) : (
               <p className="rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
-                {formatRupiah(produk.harga_diskon)}
-              </p>
-              <span className="text-xs text-teks-lembut line-through">
                 {formatRupiah(produk.harga)}
-              </span>
-            </>
-          ) : (
-            <p className="rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
-              {formatRupiah(produk.harga)}
-            </p>
+              </p>
+            )}
+          </div>
+
+          {/* Tombol Tambah ke Keranjang cepat (US-21) */}
+          {!isHabis && (
+            <div className="shrink-0">
+              <TombolTambahKeranjang produk={produk} />
+            </div>
           )}
         </div>
       </div>

@@ -380,45 +380,76 @@ export async function buatDeskripsiAI(nama, kategori) {
     return { error: "Nama produk harus diisi terlebih dahulu untuk membuat deskripsi AI." };
   }
 
-  const apiKey =
+  const apiKey = (
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+    ""
+  ).trim();
 
   if (!apiKey) {
     return {
       error:
-        "Kunci GEMINI_API_KEY belum diatur di environment variable (.env.local).",
+        "Kunci GEMINI_API_KEY belum terdeteksi. Jika baru menambahkannya ke .env.local, silakan restart server 'npm run dev'.",
     };
   }
 
   try {
     const promptTeks = `Buatkan deskripsi produk yang menarik, singkat, menggugah minat pembeli, dan bernada ramah (1-2 kalimat) untuk produk UMKM dengan nama "${nama.trim()}"${kategori ? ` dalam kategori "${kategori.trim()}"` : ""}. Tuliskan langsung teks deskripsinya saja tanpa tanda kutip dan tanpa pembukaan.`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptTeks }] }],
-        }),
-      }
-    );
+    const modelNames = [
+      "gemini-flash-latest",
+      "gemini-3.8-flash",
+      "gemini-2.5-flash",
+      "gemini-1.5-flash",
+    ];
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      return {
-        error: `Gemini API error: ${errData?.error?.message || res.statusText}`,
-      };
+    let lastError = null;
+    let hasilDeskripsi = null;
+
+    for (const model of modelNames) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptTeks }] }],
+            }),
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          hasilDeskripsi =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (hasilDeskripsi) break;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          lastError = errData?.error?.message || res.statusText;
+          const reason = errData?.error?.details?.[0]?.reason;
+
+          if (reason === "API_KEY_INVALID" || lastError.toLowerCase().includes("api key not valid")) {
+            return {
+              error: "API key Gemini ditolak oleh Google (API_KEY_INVALID). Pastikan Anda membuat API key dari Google AI Studio (https://aistudio.google.com/app/apikey).",
+            };
+          }
+
+          // Jika model tidak ditemukan atau sudah tidak tersedia, coba model berikutnya
+          if (res.status === 404 || lastError?.includes("not found") || lastError?.includes("no longer available")) {
+            continue;
+          } else {
+            break;
+          }
+        }
+      } catch (e) {
+        lastError = e?.message;
+      }
     }
 
-    const data = await res.json();
-    const hasilDeskripsi =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
     if (!hasilDeskripsi) {
-      return { error: "AI tidak menghasilkan respons. Silakan coba lagi." };
+      return { error: lastError || "AI tidak menghasilkan respons. Silakan coba lagi." };
     }
 
     return { deskripsi: hasilDeskripsi };
