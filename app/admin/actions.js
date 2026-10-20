@@ -22,6 +22,9 @@ import {
 import { simpanPengaturanTokoInternal } from "@/lib/pengaturan-toko";
 import { tambahAdminBaruInternal, hapusAdminInternal } from "@/lib/kelola-admin";
 import { catatLogAktivitas } from "@/lib/log-aktivitas";
+import { parseDanValidasiCsv, simpanProdukImpor } from "@/lib/impor-csv";
+import { geserUrutanProdukInternal } from "@/lib/urutan";
+import { tambahVarianInternal, hapusVarianInternal } from "@/lib/varian";
 
 /**
  * Server Action untuk memproses login admin.
@@ -1056,5 +1059,153 @@ export async function hapusAdminAction(formData) {
   } catch (err) {
     if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
     redirect("/admin/pengguna?error=" + encodeURIComponent(err?.message || "Gagal menghapus akun admin."));
+  }
+}
+
+/**
+ * Server Action: Impor Produk dari CSV (US-46).
+ */
+export async function imporProdukCsvAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const file = formData.get("file_csv");
+  if (!file || typeof file.size !== "number" || file.size === 0) {
+    redirect("/admin/impor?error=" + encodeURIComponent("Pilih file CSV yang akan diunggah."));
+  }
+
+  try {
+    const text = await file.text();
+    const { barisValid, barisGagal } = parseDanValidasiCsv(text);
+
+    let berhasilCount = 0;
+    if (barisValid.length > 0) {
+      const hasil = await simpanProdukImpor(barisValid);
+      berhasilCount = hasil.count;
+
+      await catatLogAktivitas({
+        user_email: user.email,
+        aksi: "IMPOR_CSV",
+        detail: `Mengimpor ${berhasilCount} produk dari file ${file.name || "CSV"}`,
+      });
+    }
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+
+    const gagalCount = barisGagal.length;
+    const sp = new URLSearchParams();
+    sp.set("berhasil", berhasilCount.toString());
+    sp.set("gagal", gagalCount.toString());
+    if (barisGagal.length > 0) {
+      sp.set("detailGagal", JSON.stringify(barisGagal.slice(0, 15)));
+    }
+
+    redirect(`/admin/impor?${sp.toString()}`);
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin/impor?error=" + encodeURIComponent(err?.message || "Gagal memproses file CSV."));
+  }
+}
+
+/**
+ * Server Action: Geser Urutan Posisi Produk (US-47).
+ */
+export async function geserUrutanAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const id = formData.get("id")?.toString();
+  const arah = formData.get("arah")?.toString();
+
+  if (!id || (arah !== "naik" && arah !== "turun")) {
+    redirect("/admin?error=" + encodeURIComponent("Parameter urutan tidak valid."));
+  }
+
+  try {
+    await geserUrutanProdukInternal(id, arah);
+    revalidatePath("/");
+    revalidatePath("/admin");
+    redirect("/admin?sukses=" + encodeURIComponent(`Urutan produk berhasil dipindahkan ke ${arah}.`));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect("/admin?error=" + encodeURIComponent(err?.message || "Gagal mengubah urutan produk."));
+  }
+}
+
+/**
+ * Server Action: Tambah Varian Ukuran/Harga Produk (US-48).
+ */
+export async function tambahVarianAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const produkId = formData.get("produk_id")?.toString();
+  const namaVarian = formData.get("nama_varian")?.toString();
+  const harga = formData.get("harga")?.toString();
+
+  if (!produkId || !namaVarian || !harga) {
+    redirect(`/admin/produk/${produkId}/ubah?error=` + encodeURIComponent("Nama varian dan harga wajib diisi."));
+  }
+
+  try {
+    await tambahVarianInternal({
+      produk_id: produkId,
+      nama_varian: namaVarian,
+      harga: harga,
+    });
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "TAMBAH_VARIAN",
+      detail: `Menambah varian "${namaVarian}" untuk produk ID: ${produkId}`,
+    });
+    revalidatePath(`/produk/${produkId}`);
+    revalidatePath(`/admin/produk/${produkId}/ubah`);
+    redirect(`/admin/produk/${produkId}/ubah?sukses=` + encodeURIComponent("Varian berhasil ditambahkan."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect(`/admin/produk/${produkId}/ubah?error=` + encodeURIComponent(err?.message || "Gagal menambah varian."));
+  }
+}
+
+/**
+ * Server Action: Hapus Varian Produk (US-48).
+ */
+export async function hapusVarianAction(formData) {
+  const supabase = await createSessionClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/admin/login?error=" + encodeURIComponent("Sesi berakhir. Silakan login kembali."));
+  }
+
+  const varianId = formData.get("varian_id")?.toString();
+  const produkId = formData.get("produk_id")?.toString();
+
+  if (!varianId) {
+    redirect(`/admin/produk/${produkId}/ubah?error=` + encodeURIComponent("ID varian tidak valid."));
+  }
+
+  try {
+    await hapusVarianInternal(varianId);
+    await catatLogAktivitas({
+      user_email: user.email,
+      aksi: "HAPUS_VARIAN",
+      detail: `Menghapus varian ID: ${varianId} dari produk ID: ${produkId}`,
+    });
+    revalidatePath(`/produk/${produkId}`);
+    revalidatePath(`/admin/produk/${produkId}/ubah`);
+    redirect(`/admin/produk/${produkId}/ubah?sukses=` + encodeURIComponent("Varian berhasil dihapus."));
+  } catch (err) {
+    if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+    redirect(`/admin/produk/${produkId}/ubah?error=` + encodeURIComponent(err?.message || "Gagal menghapus varian."));
   }
 }

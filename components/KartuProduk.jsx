@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
+import { kategoriKeSlug } from "@/lib/kategori-slug";
 import TombolFavorit from "@/components/TombolFavorit";
 import TombolTambahKeranjang from "@/components/TombolTambahKeranjang";
 import TombolBandingkan from "@/components/TombolBandingkan";
@@ -78,7 +79,28 @@ export default function KartuProduk({ produk }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <p className="text-xs text-teks-lembut">{produk.kategori}</p>
+        {/* US-49: Tautan Kategori di Kartu Produk */}
+        {produk.kategori && (
+          <span
+            role="link"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.location.href = `/kategori/${kategoriKeSlug(produk.kategori)}`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = `/kategori/${kategoriKeSlug(produk.kategori)}`;
+              }
+            }}
+            className="text-xs text-teks-lembut hover:text-utama hover:underline cursor-pointer z-10 self-start transition-colors"
+          >
+            {produk.kategori}
+          </span>
+        )}
         <h3 className="font-semibold leading-snug group-hover:text-utama line-clamp-2 transition-colors">
           {produk.nama}
         </h3>

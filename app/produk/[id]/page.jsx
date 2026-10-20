@@ -9,9 +9,12 @@ import GaleriProduk from "@/components/GaleriProduk";
 import CatatTerakhirDilihat from "@/components/CatatTerakhirDilihat";
 import FormUlasan from "@/components/FormUlasan";
 import DaftarUlasan from "@/components/DaftarUlasan";
+import TanyaProdukAI from "@/components/TanyaProdukAI";
 import { getUlasanProduk } from "@/lib/ulasan";
+import { getVarianByProdukId } from "@/lib/varian";
 import { formatRupiah } from "@/lib/format";
 import { getPengaturanToko } from "@/lib/pengaturan-toko";
+import { kategoriKeSlug } from "@/lib/kategori-slug";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +89,7 @@ export async function generateMetadata({ params }) {
 export default async function HalamanDetailProduk({ params }) {
   const { id } = await params;
   const toko = await getPengaturanToko();
+  const varianList = await getVarianByProdukId(id);
 
   let produk = null;
   let produkTerkait = [];
@@ -215,7 +219,16 @@ export default async function HalamanDetailProduk({ params }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-teks-lembut">{produk.kategori}</span>
+            {/* US-49: Tautan ke Halaman Kategori */}
+            {produk.kategori && (
+              <Link
+                href={`/kategori/${kategoriKeSlug(produk.kategori)}`}
+                className="rounded-full bg-permukaan border border-garis px-2.5 py-0.5 text-xs font-semibold text-teks-lembut hover:border-utama hover:text-utama transition-colors"
+                title={`Lihat semua produk dalam kategori ${produk.kategori}`}
+              >
+                {produk.kategori}
+              </Link>
+            )}
 
             {/* US-19: Penanda Habis */}
             {isHabis && (
@@ -260,8 +273,11 @@ export default async function HalamanDetailProduk({ params }) {
             </p>
           )}
 
-          {/* Tombol pemesanan WhatsApp, stepper jumlah (US-12), & tambah keranjang (US-21) */}
-          <TombolWhatsApp produk={produkLengkap} nomorWhatsApp={toko.nomorWhatsApp} />
+          {/* Tombol pemesanan WhatsApp, stepper jumlah (US-12), & tambah keranjang (US-21), varian ukuran (US-48) */}
+          <TombolWhatsApp produk={produkLengkap} nomorWhatsApp={toko.nomorWhatsApp} varianList={varianList} />
+
+          {/* US-50: Kotak Tanya Jawab AI Seputar Produk */}
+          <TanyaProdukAI produkId={produk.id} namaProduk={produk.nama} />
         </div>
       </article>
 

@@ -3,6 +3,7 @@ import TerakhirDilihat from "@/components/TerakhirDilihat";
 import BannerPromo from "@/components/BannerPromo";
 import { getPengaturanToko } from "@/lib/pengaturan-toko";
 import { getBannerAktif } from "@/lib/banner";
+import { terapkanUrutanProduk } from "@/lib/urutan";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,10 @@ export default async function HalamanKatalog({ searchParams }) {
       pesanError = `Gagal memuat produk: ${error.message}`;
     } else {
       daftarProduk = data || [];
+      // US-47: Terapkan urutan kustom admin jika urutan default
+      if (!urutan) {
+        daftarProduk = terapkanUrutanProduk(daftarProduk);
+      }
       totalProduk = count || 0;
     }
   } catch (err) {

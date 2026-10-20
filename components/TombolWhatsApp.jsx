@@ -5,8 +5,11 @@ import { toko } from "@/lib/toko";
 import { formatRupiah } from "@/lib/format";
 import { useKeranjang } from "@/components/PenyediaAplikasi";
 
-export default function TombolWhatsApp({ produk, nomorWhatsApp }) {
+export default function TombolWhatsApp({ produk, nomorWhatsApp, varianList = [] }) {
   const [jumlah, setJumlah] = useState(1);
+  const [varianDipilih, setVarianDipilih] = useState(
+    varianList && varianList.length > 0 ? varianList[0] : null
+  );
   const [suksesKeranjang, setSuksesKeranjang] = useState(false);
   const { tambahItem } = useKeranjang();
 
@@ -48,23 +51,38 @@ export default function TombolWhatsApp({ produk, nomorWhatsApp }) {
       ? Number(diskonDeskripsi)
       : null;
 
-  const hargaSatuan =
+  const hargaDasar =
     hargaDiskon && hargaDiskon < Number(produk.harga)
       ? hargaDiskon
       : Number(produk.harga);
+
+  // US-48: Jika ada varian dipilih, harga mengikuti varian tersebut
+  const hargaSatuan = varianDipilih ? Number(varianDipilih.harga) : hargaDasar;
 
   const waTarget = nomorWhatsApp || toko.nomorWhatsApp;
   const nomor = waTarget ? waTarget.replace(/\D/g, "") : "";
   const totalHarga = hargaSatuan * jumlah;
   const totalHargaTeks = formatRupiah(totalHarga);
 
-  // Format pesan otomatis: jika jumlah > 1 cantumkan "2x NamaProduk" (US-12)
-  const namaPesan = jumlah > 1 ? `${jumlah}x ${produk.nama}` : produk.nama;
+  // Format pesan otomatis: jika ada varian, sertakan nama varian (US-48)
+  const namaProdukTeks = varianDipilih
+    ? `${produk.nama} (${varianDipilih.nama_varian})`
+    : produk.nama;
+  const namaPesan = jumlah > 1 ? `${jumlah}x ${namaProdukTeks}` : namaProdukTeks;
   const pesan = `Halo, saya ingin memesan ${namaPesan} seharga ${totalHargaTeks}.`;
   const tautan = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
 
   const handleTambahKeranjang = () => {
-    tambahItem({ ...produk, harga_diskon: hargaDiskon }, jumlah);
+    tambahItem(
+      {
+        ...produk,
+        id: varianDipilih ? `${produk.id}_${varianDipilih.id}` : produk.id,
+        nama: namaProdukTeks,
+        harga: hargaSatuan,
+        harga_diskon: null,
+      },
+      jumlah
+    );
     setSuksesKeranjang(true);
     setTimeout(() => setSuksesKeranjang(false), 2200);
   };
@@ -87,6 +105,43 @@ export default function TombolWhatsApp({ produk, nomorWhatsApp }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* US-48: Pilihan Varian Ukuran & Harga */}
+      {varianList && varianList.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-teks">
+            Pilihan Ukuran / Varian:
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {varianList.map((v) => {
+              const isSelected = varianDipilih?.id === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setVarianDipilih(v)}
+                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
+                    isSelected
+                      ? "border-utama bg-utama/10 text-utama ring-1 ring-utama"
+                      : "border-garis bg-latar text-teks hover:border-utama/50"
+                  }`}
+                >
+                  <span>{v.nama_varian}</span>
+                  <span className="text-[11px] font-normal text-teks-lembut">({formatRupiah(v.harga)})</span>
+                </button>
+              );
+            })}
+          </div>
+          {varianDipilih && (
+            <div className="flex items-baseline gap-2 pt-1">
+              <span className="text-xs text-teks-lembut">Harga varian:</span>
+              <span className="text-xl font-extrabold text-utama">
+                {formatRupiah(hargaSatuan)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Pilihan jumlah produk (US-12) */}
       <div className="flex items-center gap-3">
         <label htmlFor="input-jumlah" className="text-sm font-semibold text-teks">

@@ -706,3 +706,73 @@ Membuat modul pencatatan `lib/log-aktivitas.js` dan halaman `app/admin/log/page.
 
 **Perbaikan:**
 Mengintegrasikan pencatatan log di seluruh Server Action penting dengan fallback penyimpanan lokal `lib/log-data.json` agar riwayat tetap tersimpan aman dan tidak gagal jika tabel database belum dibuat.
+
+## US-46 Impor produk dari CSV
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-46.
+
+Buat form unggah CSV di admin dengan login diperiksa di server. Setiap baris divalidasi (kolom wajib, harga angka); baris yang salah dilaporkan beserta nomor barisnya. Baris valid disimpan sekaligus ke database. Tampilkan ringkasan hasil (berhasil dan gagal).
+
+**Hasil:**
+Membuat halaman `app/admin/impor/page.jsx`, modul parser `lib/impor-csv.js`, dan Server Action `imporProdukCsvAction` di `app/admin/actions.js`. Form unggah menerima file CSV yang divalidasi per baris (memastikan kolom `nama` terisi dan `harga` berupa angka positif > 0). Baris yang salah dilaporkan nomor baris dan penyebab errornya, sementara baris valid disimpan sekaligus (batch insert) ke database Supabase dan dicatat dalam log aktivitas admin. Halaman menampilkan ringkasan visual jumlah baris berhasil vs gagal beserta detail baris bermasalah.
+
+**Perbaikan:**
+Mendukung format pemisah CSV ganda (koma `,` dan titik koma `;`) serta pembersihan otomatis simbol non-numerik pada harga.
+
+## US-47 Atur urutan tampil produk
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-47.
+
+Tambahkan kolom urutan di produk. Admin bisa menaikkan dan menurunkan urutan produk, dan katalog publik mengikuti urutan tersebut. Aksi memeriksa login admin di server.
+
+**Hasil:**
+Membuat modul `lib/urutan.js` dan Server Action `geserUrutanAction` di `app/admin/actions.js`. Di tabel produk admin (`components/TabelProduk.jsx`), ditambahkan tombol geser naik (▲) dan turun (▼) untuk mengatur posisi relatif antar-produk. Urutan kustom disimpan ke database dan diselaraskan pada katalog publik (`app/page.jsx` dan `app/kategori/[slug]/page.jsx`) sehingga produk prioritas/unggulan tampil paling awal secara konsisten saat mode urutan bawaan aktif.
+
+**Perbaikan:**
+Menerapkan mekanisme dual-storage urutan dengan cache lokal `lib/urutan-data.json` agar urutan kustom tetap berjalan mulus meskipun kolom urutan belum dibuat di database remote Supabase.
+
+## US-48 Varian harga per ukuran
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-48.
+
+Buat tabel varian di database (produk, nama varian, harga). Admin bisa mengelola varian per produk. Halaman detail menampilkan pilihan varian dan harga berubah sesuai pilihan. Pesan WhatsApp memuat varian dan harga yang dipilih.
+
+**Hasil:**
+Membuat modul `lib/varian.js`, tabel varian di database/lokal, dan Server Actions `tambahVarianAction` serta `hapusVarianAction`. Di halaman edit produk (`/admin/produk/[id]/ubah`), admin dapat menambah dan menghapus varian ukuran beserta harganya. Pada halaman detail produk (`app/produk/[id]/page.jsx`), komponen `TombolWhatsApp.jsx` menampilkan tombol pilihan varian ukuran; ketika salah satu varian dipilih, harga produk yang tampil di layar otomatis diperbarui dan teks pesan pesanan WhatsApp memuat rincian nama varian beserta harganya secara spesifik.
+
+**Perbaikan:**
+Menyinkronkan penambahan varian ukuran ke dalam item keranjang belanja (`PenyediaAplikasi`) agar subtotal dan rincian pesanan tetap akurat sesuai varian yang dipilih.
+
+## US-49 Halaman per kategori
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-49.
+
+Buat halaman /kategori/[slug] yang menampilkan produk kategori itu dari database. Kategori yang tidak ada menampilkan "tidak ditemukan". Nama kategori di kartu atau halaman detail tertaut ke halaman tersebut.
+
+**Hasil:**
+Membuat halaman dinamis `app/kategori/[slug]/page.jsx` dan modul `lib/kategori-slug.js` untuk mengonversi nama kategori menjadi slug SEO-friendly. Halaman menampilkan seluruh produk aktif dalam kategori tersebut dari database secara server-side. Jika slug tidak ditemukan, ditampilkan status "Kategori tidak ditemukan" dengan tautan kembali ke beranda katalog. Nama kategori pada `KartuProduk.jsx` dan di halaman detail produk `app/produk/[id]/page.jsx` dijadikan tautan aktif menuju halaman kategori terkait.
+
+**Perbaikan:**
+Menangani decoding URI karakter khusus seperti tanda ampersand (`&` -> `dan`) pada URL slug agar tautan kategori selalu valid dan mudah dibagikan.
+
+## US-50 Asisten AI tanya jawab produk
+
+**Prompt:**
+
+Baca AGENTS.md aturan keamanan dan docs/user-stories.md bagian US-50.
+
+Tambahkan kotak tanya di halaman detail produk. Jawaban dari LLM dipanggil dari server, kunci tidak ada di browser, dan jawabannya hanya berdasarkan data produk. Batasi panjang pertanyaan, dan tangani error atau timeout dengan pesan yang jelas. Tambahkan pembatasan kiriman dasar agar tidak disalahgunakan.
+
+**Hasil:**
+Membuat Route Handler `app/api/tanya-produk/route.js` dan komponen klien `components/TanyaProdukAI.jsx`. Pengunjung dapat mengajukan pertanyaan tentang produk langsung di halaman detail produk. Jawaban diproses di server menggunakan Google Gemini API (tanpa membocorkan API key ke browser) dengan instruksi sistem ketat agar hanya menjawab sesuai data faktual produk (nama, harga, kategori, deskripsi, dan varian). Dilengkapi tombol rekomendasi pertanyaan cepat, batas panjang pertanyaan (maksimal 200 karakter), penanganan timeout koneksi (10 detik), dan pembatasan frekuensi pengiriman (rate limiting) maksimal 5 pertanyaan per menit per IP untuk mencegah penyalahgunaan.
+
+**Perbaikan:**
+Menambahkan fallback multibahasa dan multi-model Gemini (`gemini-flash-latest`, `gemini-3.8-flash`, `gemini-2.5-flash`, `gemini-1.5-flash`) serta penanganan error yang sopan mengarahkan pembeli ke WhatsApp jika API tidak tersedia.

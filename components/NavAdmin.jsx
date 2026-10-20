@@ -25,6 +25,9 @@ export default function NavAdmin() {
       <Link href="/admin/log" className="font-semibold hover:text-utama transition-colors">
         Log Aktivitas
       </Link>
+      <Link href="/admin/impor" className="font-semibold hover:text-utama transition-colors">
+        Impor CSV
+      </Link>
       <Link href="/admin/password" className="font-semibold hover:text-utama transition-colors">
         Password
       </Link>

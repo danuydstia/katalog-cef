@@ -2,7 +2,7 @@
 
 import { formatRupiah } from "@/lib/format";
 import Tombol from "@/components/Tombol";
-import { hapusProduk, toggleStatusProduk } from "@/app/admin/actions";
+import { hapusProduk, toggleStatusProduk, geserUrutanAction } from "@/app/admin/actions";
 
 export default function TabelProduk({ daftarProduk = [] }) {
   const handleHapus = (e, nama) => {
@@ -19,6 +19,7 @@ export default function TabelProduk({ daftarProduk = [] }) {
             <th className="px-4 py-3.5">Produk</th>
             <th className="px-4 py-3.5">Kategori</th>
             <th className="px-4 py-3.5">Harga</th>
+            <th className="px-4 py-3.5 text-center">Urutan</th>
             <th className="px-4 py-3.5 text-center">Status</th>
             <th className="px-4 py-3.5 text-right">Aksi</th>
           </tr>
@@ -46,6 +47,33 @@ export default function TabelProduk({ daftarProduk = [] }) {
                 <td className="px-4 py-3.5 text-teks-lembut">{produk.kategori || "-"}</td>
                 <td className="px-4 py-3.5 font-medium text-teks">
                   {formatRupiah(produk.harga)}
+                </td>
+                {/* US-47: Tombol Naik / Turun Urutan */}
+                <td className="px-4 py-3.5 text-center">
+                  <div className="inline-flex items-center gap-1">
+                    <form action={geserUrutanAction}>
+                      <input type="hidden" name="id" value={produk.id} />
+                      <input type="hidden" name="arah" value="naik" />
+                      <button
+                        type="submit"
+                        title="Naikkan urutan"
+                        className="rounded-md border border-garis bg-latar p-1 text-xs font-bold text-teks-lembut hover:border-utama hover:text-utama hover:bg-permukaan transition-colors"
+                      >
+                        ▲
+                      </button>
+                    </form>
+                    <form action={geserUrutanAction}>
+                      <input type="hidden" name="id" value={produk.id} />
+                      <input type="hidden" name="arah" value="turun" />
+                      <button
+                        type="submit"
+                        title="Turunkan urutan"
+                        className="rounded-md border border-garis bg-latar p-1 text-xs font-bold text-teks-lembut hover:border-utama hover:text-utama hover:bg-permukaan transition-colors"
+                      >
+                        ▼
+                      </button>
+                    </form>
+                  </div>
                 </td>
                 {/* US-32: Kolom Status Aktif/Nonaktif */}
                 <td className="px-4 py-3.5 text-center">
