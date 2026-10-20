@@ -214,5 +214,72 @@ Menu dropdown urutan produk (Termurah, Termahal, Terbaru) ditambahkan pada form 
 **Perbaikan:**
 Mengintegrasikan pengurutan secara terpadu bersama pencarian dan filter kategori dalam satu form GET yang bersih dan dapat di-bookmark.
 
-Mengintegrasikan pengurutan secara terpadu bersama pencarian dan filter kategori dalam satu form GET yang bersih dan dapat di-bookmark.
+## US-16 Paginasi atau muat lebih banyak
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-16.
+
+Tambahkan paginasi atau tombol "Muat lebih banyak" pada daftar produk di beranda. Batas jumlah diambil lewat query database (range/limit), bukan hanya menyembunyikan kartu. Navigasi antar halaman berfungsi dan jumlah halaman benar.
+
+**Hasil:**
+Paginasi produk berhasil diterapkan pada beranda `app/page.jsx` dengan 12 produk per halaman. Batas jumlah diambil langsung melalui query database menggunakan method `.range(from, to)` dan `{ count: "exact" }`. Navigasi Sebelumnya / Selanjutnya berfungsi dengan nomor halaman yang akurat.
+
 **Perbaikan:**
+Fungsi navigasi paginasi mempertahankan parameter pencarian, filter kategori, dan urutan yang sedang aktif melalui `URLSearchParams`.
+
+## US-17 Produk terkait di halaman detail
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-17.
+
+Di halaman detail app/produk/[id]/page.jsx, tampilkan beberapa produk lain dari kategori yang sama, diambil dari database. Produk yang sedang dibuka tidak ikut ditampilkan. Jangan ubah tampilan utama halaman detail.
+
+**Hasil:**
+Halaman detail `app/produk/[id]/page.jsx` menampilkan bagian *"Produk terkait"* dari kategori yang sama langsung dari database Supabase (`.eq("kategori", ...)`). Produk yang sedang dibuka dikecualikan dari daftar dengan filter `.neq("id", id)`.
+
+**Perbaikan:**
+Menampilkan hingga 4 produk terkait dalam tata letak grid kartu menggunakan komponen `KartuProduk` yang konsisten.
+
+## US-18 Galeri beberapa foto produk
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-18.
+
+Tambahkan dukungan beberapa foto per produk (misalnya kolom array atau tabel foto_produk). Halaman detail menampilkan galeri: foto utama dan gambar kecil, pengunjung bisa berganti foto. Produk dengan satu foto tetap tampil normal.
+
+**Hasil:**
+Dibuat komponen `GaleriProduk` untuk mendukung multi-foto pada produk. Halaman detail menampilkan foto utama dan deretan thumbnail kecil yang dapat diklik untuk berganti foto secara interaktif. Produk dengan satu foto tetap tampil normal seperti semula.
+
+**Perbaikan:**
+Mendukung format multi-foto baik berupa array `foto_urls` maupun string URL yang dipisahkan tanda koma pada `foto_url`.
+
+## US-19 Status stok
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-19.
+
+Tambahkan kolom status/jumlah stok di tabel produk. Produk yang habis diberi penanda "Habis" di kartu dan halaman detail, serta tombol pesan WhatsApp dinonaktifkan atau disembunyikan untuk produk tersebut.
+
+**Hasil:**
+Dukungan status stok (`stok` / `status_stok`) ditambahkan pada kartu produk dan halaman detail. Produk yang habis ditandai dengan badge *"Habis"* berwarna merah, dan tombol pesan WhatsApp otomatis dinonaktifkan dengan label *"Produk Habis"*.
+
+**Perbaikan:**
+Mencegah pengunjung mengeklik tombol pemesanan WhatsApp saat stok produk habis, sekaligus memberikan feedback visual yang jelas.
+
+## US-20 Harga coret dan badge
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-20.
+
+Tambahkan dukungan harga diskon dan badge ("Baru" / "Terlaris") berdasarkan data produk. Harga normal tampil dicoret di kartu dan halaman detail kalau ada harga diskon. Badge tampil sesuai data produk.
+
+**Hasil:**
+Dukungan harga diskon (`harga_diskon`) dan badge (*"Baru"* / *"Terlaris"*) ditambahkan pada kartu produk dan halaman detail. Harga normal tampil dicoret (`line-through`) jika terdapat harga diskon, dan badge tampil di sudut kartu/halaman detail.
+
+**Perbaikan:**
+Perhitungan total harga pada pemesanan WhatsApp otomatis memakai harga diskon yang aktif.

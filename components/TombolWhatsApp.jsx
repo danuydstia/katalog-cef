@@ -9,8 +9,36 @@ export default function TombolWhatsApp({ produk }) {
 
   if (!produk) return null;
 
+  const isHabis =
+    produk.stok === 0 ||
+    produk.status_stok === "habis" ||
+    (typeof produk.deskripsi === "string" && /\[habis\]/i.test(produk.deskripsi));
+
+  // Jika stok habis, nonaktifkan tombol WhatsApp (US-19)
+  if (isHabis) {
+    return (
+      <div className="flex flex-col gap-2">
+        <span className="inline-flex items-center gap-1.5 self-start rounded-md bg-bahaya/10 px-2.5 py-1 text-xs font-bold text-bahaya">
+          ● Stok Habis
+        </span>
+        <button
+          type="button"
+          disabled
+          className="inline-flex w-full items-center justify-center rounded-lg bg-garis px-5 py-3 font-semibold text-teks-lembut cursor-not-allowed sm:w-auto"
+        >
+          Produk Habis
+        </button>
+      </div>
+    );
+  }
+
+  const hargaSatuan =
+    produk.harga_diskon && Number(produk.harga_diskon) < Number(produk.harga)
+      ? Number(produk.harga_diskon)
+      : Number(produk.harga);
+
   const nomor = toko.nomorWhatsApp ? toko.nomorWhatsApp.replace(/\D/g, "") : "";
-  const totalHarga = produk.harga * jumlah;
+  const totalHarga = hargaSatuan * jumlah;
   const totalHargaTeks = formatRupiah(totalHarga);
 
   // Format pesan otomatis: jika jumlah > 1 cantumkan "2x NamaProduk" (US-12)
