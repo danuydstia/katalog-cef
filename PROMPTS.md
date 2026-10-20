@@ -761,7 +761,7 @@ Buat halaman /kategori/[slug] yang menampilkan produk kategori itu dari database
 Membuat halaman dinamis `app/kategori/[slug]/page.jsx` dan modul `lib/kategori-slug.js` untuk mengonversi nama kategori menjadi slug SEO-friendly. Halaman menampilkan seluruh produk aktif dalam kategori tersebut dari database secara server-side. Jika slug tidak ditemukan, ditampilkan status "Kategori tidak ditemukan" dengan tautan kembali ke beranda katalog. Nama kategori pada `KartuProduk.jsx` dan di halaman detail produk `app/produk/[id]/page.jsx` dijadikan tautan aktif menuju halaman kategori terkait.
 
 **Perbaikan:**
-Menangani decoding URI karakter khusus seperti tanda ampersand (`&` -> `dan`) pada URL slug agar tautan kategori selalu valid dan mudah dibagikan.
+Menangani decoding URI karakter khusus seperti tanda ampersand (`&` -> `dan`) pada URL slug, serta merefaktor `KartuProduk.jsx` menjadi elemen `<article>` dengan tautan `<Link>` mandiri tanpa event handler `onClick` agar sepenuhnya valid dan kompatibel sebagai Server Component di Next.js App Router.
 
 ## US-50 Asisten AI tanya jawab produk
 

@@ -49,16 +49,15 @@ export default function KartuProduk({ produk }) {
     : produk;
 
   return (
-    <Link
-      href={`/produk/${produk.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-garis bg-latar transition-colors"
-    >
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-garis bg-latar transition-colors">
       <div className="relative aspect-square w-full bg-permukaan overflow-hidden">
-        <img
-          src={fotoUtama}
-          alt={produk.nama}
-          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        <Link href={`/produk/${produk.id}`} className="block h-full w-full">
+          <img
+            src={fotoUtama}
+            alt={produk.nama}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </Link>
 
         {/* Tombol Simpan Favorit (US-24) */}
         <div className="absolute top-2.5 right-2.5 z-10">
@@ -81,29 +80,19 @@ export default function KartuProduk({ produk }) {
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         {/* US-49: Tautan Kategori di Kartu Produk */}
         {produk.kategori && (
-          <span
-            role="link"
-            tabIndex={0}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              window.location.href = `/kategori/${kategoriKeSlug(produk.kategori)}`;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                window.location.href = `/kategori/${kategoriKeSlug(produk.kategori)}`;
-              }
-            }}
-            className="text-xs text-teks-lembut hover:text-utama hover:underline cursor-pointer z-10 self-start transition-colors"
+          <Link
+            href={`/kategori/${kategoriKeSlug(produk.kategori)}`}
+            className="text-xs text-teks-lembut hover:text-utama hover:underline self-start transition-colors"
           >
             {produk.kategori}
-          </span>
+          </Link>
         )}
-        <h3 className="font-semibold leading-snug group-hover:text-utama line-clamp-2 transition-colors">
-          {produk.nama}
-        </h3>
+
+        <Link href={`/produk/${produk.id}`}>
+          <h3 className="font-semibold leading-snug group-hover:text-utama line-clamp-2 transition-colors">
+            {produk.nama}
+          </h3>
+        </Link>
 
         <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
           <div className="flex flex-wrap items-baseline gap-1.5">
@@ -131,6 +120,6 @@ export default function KartuProduk({ produk }) {
           </div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
