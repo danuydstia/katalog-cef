@@ -79,3 +79,15 @@ Buat file proxy.js di root proyek (Next.js 16). Semua rute /admin kecuali /admin
 ## Debugging dan fitur bonus
 
 Tambahkan bagian baru untuk setiap error yang kamu perbaiki atau fitur bonus yang kamu kerjakan.
+
+## US-07 List Produk
+
+**Prompt:**
+
+Baca docs/user-stories.md bagian US-07.
+
+Buat halaman daftar produk admin di app/admin/page.jsx yang mengambil semua produk dari tabel "produk" di Supabase, di sisi server, memakai koneksi Supabase yang sudah dibuat di lib/supabase. Tampilkan produk dalam bentuk tabel/daftar yang rapi (nama, harga, dan aksi), tanpa mengubah tampilan yang sudah ada. Kalau gagal mengambil data, tampilkan pesan error yang jelas. Kalau tabel kosong, tampilkan tulisan "Belum ada produk". Hapus CatatanBelumAktif dari halaman ini.
+
+**Hasil:**
+
+**Perbaikan:**
