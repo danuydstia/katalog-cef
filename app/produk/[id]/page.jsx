@@ -277,7 +277,13 @@ export default async function HalamanDetailProduk({ params }) {
           <TombolWhatsApp produk={produkLengkap} nomorWhatsApp={toko.nomorWhatsApp} varianList={varianList} />
 
           {/* US-50: Kotak Tanya Jawab AI Seputar Produk */}
-          <TanyaProdukAI produkId={produk.id} namaProduk={produk.nama} />
+          <TanyaProdukAI
+            produkId={produk.id}
+            namaProduk={produk.nama}
+            produk={produkLengkap}
+            nomorWhatsApp={toko.nomorWhatsApp}
+            varianList={varianList}
+          />
         </div>
       </article>
 

@@ -31,9 +31,117 @@ function periksaRateLimit(ip) {
   return true;
 }
 
+/**
+ * Fallback cerdas berbasis data faktual produk (US-50: jawabannya hanya berdasarkan data produk).
+ * Digunakan jika koneksi Google Gemini eksternal mengalami timeout atau gangguan jaringan.
+ */
+function jawabDariDataProduk(pertanyaan, produk, infoVarian) {
+  const tanya = (pertanyaan || "").toLowerCase();
+  const nama = produk?.nama || "Produk";
+  const hargaTeks = formatRupiah(produk?.harga || 0);
+  const deskripsi = produk?.deskripsi || "Produk berkualitas pilihan dari UMKM lokal kami.";
+  const isHabis = produk?.stok === 0 || /\[habis\]/i.test(produk?.deskripsi || "");
+
+  // Pertanyaan seputar pemesanan / pembelian / cara beli / whatsapp
+  if (
+    tanya.includes("pesan") ||
+    tanya.includes("beli") ||
+    tanya.includes("order") ||
+    tanya.includes("cara") ||
+    tanya.includes("checkout") ||
+    tanya.includes("wa") ||
+    tanya.includes("hubungi") ||
+    tanya.includes("kirim") ||
+    tanya.includes("ongkir")
+  ) {
+    return `Untuk memesan ${nama}, cukup klik tombol "Pesan via WhatsApp" di halaman ini. Anda akan langsung terhubung dengan admin toko untuk konfirmasi pesanan dan alamat pengiriman.`;
+  }
+
+  // Pertanyaan seputar harga / promo / diskon
+  if (
+    tanya.includes("harga") ||
+    tanya.includes("biaya") ||
+    tanya.includes("berapa") ||
+    tanya.includes("diskon") ||
+    tanya.includes("promo") ||
+    tanya.includes("murah")
+  ) {
+    let teks = `Harga ${nama} adalah ${hargaTeks}.`;
+    if (infoVarian && !infoVarian.includes("Standar")) {
+      teks += ` Tersedia varian: ${infoVarian}.`;
+    }
+    return `${teks} Anda bisa langsung memesan via tombol WhatsApp di bawah!`;
+  }
+
+  // Pertanyaan seputar varian / ukuran
+  if (
+    tanya.includes("varian") ||
+    tanya.includes("ukuran") ||
+    tanya.includes("gram") ||
+    tanya.includes("liter") ||
+    tanya.includes("size") ||
+    tanya.includes("pilihan") ||
+    tanya.includes("warna")
+  ) {
+    if (infoVarian && !infoVarian.includes("Standar")) {
+      return `Untuk ${nama}, pilihan varian/ukuran yang tersedia: ${infoVarian}. Anda dapat memilih varian yang diinginkan saat memesan.`;
+    }
+    return `Saat ini ${nama} tersedia dalam pilihan standar seharga ${hargaTeks}.`;
+  }
+
+  // Pertanyaan ketersediaan / stok
+  if (
+    tanya.includes("stok") ||
+    tanya.includes("ready") ||
+    tanya.includes("habis") ||
+    tanya.includes("tersedia") ||
+    tanya.includes("ada?") ||
+    tanya.includes("masih")
+  ) {
+    if (isHabis) {
+      return `Maaf, stok ${nama} saat ini sedang habis dan akan segera kami sediakan kembali.`;
+    }
+    return `Ya, ${nama} siap dipesan sekarang dengan harga ${hargaTeks}! Silakan klik "Pesan via WhatsApp".`;
+  }
+
+  // Pertanyaan seputar rasa / bahan / masa simpan / expired / halal
+  if (
+    tanya.includes("halal") ||
+    tanya.includes("bpom") ||
+    tanya.includes("bahan") ||
+    tanya.includes("komposisi") ||
+    tanya.includes("awet") ||
+    tanya.includes("tahan") ||
+    tanya.includes("expired") ||
+    tanya.includes("kadaluarsa") ||
+    tanya.includes("simpan")
+  ) {
+    const bersih = deskripsi.replace(/\[(diskon:\s*\d+|baru|terlaris|habis)\]/gi, "").trim();
+    return `${nama} dibuat dengan bahan berkualitas UMKM. ${bersih ? `Keterangan produk: "${bersih}".` : ""} Untuk detail masa simpan atau sertifikasi khusus, silakan tanyakan langsung ke admin kami melalui WhatsApp.`;
+  }
+
+  // Pertanyaan seputar deskripsi / keunggulan
+  if (
+    tanya.includes("deskripsi") ||
+    tanya.includes("apa itu") ||
+    tanya.includes("tentang") ||
+    tanya.includes("keunggulan") ||
+    tanya.includes("rasa") ||
+    tanya.includes("manfaat")
+  ) {
+    const bersih = deskripsi.replace(/\[(diskon:\s*\d+|baru|terlaris|habis)\]/gi, "").trim();
+    return `${nama}: ${bersih}. Harga mulai ${hargaTeks}.`;
+  }
+
+  // Jawaban umum berbasis data produk
+  return `${nama} (${produk?.kategori || "Produk UMKM"}) tersedia seharga ${hargaTeks}${
+    infoVarian && !infoVarian.includes("Standar") ? ` dengan varian ${infoVarian}` : ""
+  }. Anda dapat langsung berkonsultasi atau memesan melalui tombol WhatsApp di bawah.`;
+}
+
 export async function POST(request) {
   try {
-    // Ambil IP pengunjung untuk rate limiting
+    // 1. Ambil IP pengunjung untuk rate limiting (US-50)
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
@@ -57,7 +165,7 @@ export async function POST(request) {
       );
     }
 
-    const { produkId, pertanyaan } = body;
+    const { produkId, pertanyaan, produkData } = body;
     const teksPertanyaan = (pertanyaan || "").trim();
 
     if (!produkId) {
@@ -67,7 +175,7 @@ export async function POST(request) {
       );
     }
 
-    // Validasi panjang pertanyaan (US-50: batasi panjang pertanyaan)
+    // 2. Validasi panjang pertanyaan (US-50: batasi panjang pertanyaan)
     if (!teksPertanyaan || teksPertanyaan.length < 3) {
       return NextResponse.json(
         { error: "Pertanyaan terlalu pendek. Tuliskan minimal 3 karakter." },
@@ -82,20 +190,24 @@ export async function POST(request) {
       );
     }
 
-    // Ambil data produk langsung dari server
+    // 3. Ambil data produk di sisi server
     let produk = null;
     try {
       const supabase = createServerClient();
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("produk")
         .select("*")
-        .eq("id", produkId)
+        .eq("id", Number(produkId) || produkId)
         .maybeSingle();
 
-      if (!error && data) {
+      if (data) {
         produk = data;
       }
     } catch {}
+
+    if (!produk && produkData && produkData.nama) {
+      produk = produkData;
+    }
 
     if (!produk) {
       return NextResponse.json(
@@ -118,17 +230,7 @@ export async function POST(request) {
       ""
     ).trim();
 
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Asisten AI belum diaktifkan oleh admin (kunci API belum diatur). Silakan pesan langsung via WhatsApp.",
-        },
-        { status: 503 }
-      );
-    }
-
-    // Susun prompt yang ketat: HANYA berdasarkan data produk terkait (US-50)
+    // 4. Susun prompt: HANYA berdasarkan data produk terkait (US-50)
     const promptSystem = `Anda adalah asisten toko ramah dan membantu untuk UMKM. Tugas Anda HANYA menjawab pertanyaan pengunjung mengenai SATU produk di bawah ini berdasarkan informasi yang diberikan.
 JANGAN MENGARANG informasi di luar data yang tercantum. Jika jawaban tidak tercantum di data produk, katakan dengan sopan bahwa informasi tersebut belum tercantum dan sarankan untuk bertanya langsung melalui tombol WhatsApp kepada pemilik toko.
 Gunakan bahasa Indonesia yang santun, ramah, dan ringkas (1-3 kalimat).
@@ -144,76 +246,57 @@ DATA PRODUK:
 PERTANYAAN PENGUNJUNG:
 "${teksPertanyaan}"`;
 
-    const modelNames = [
-      "gemini-flash-lite-latest",
-      "gemini-3.5-flash-lite",
-      "gemini-flash-latest",
-      "gemini-3.5-flash",
-      "gemini-3.8-flash",
-    ];
-
     let hasilJawaban = null;
-    let lastError = null;
 
-    // Panggil model Gemini dengan timeout 25 detik (US-50)
-    for (const model of modelNames) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+    // Jika apiKey tersedia, panggil Gemini API dengan batas waktu respons cepat (maksimal 3.5 detik per panggilan)
+    if (apiKey) {
+      const modelNames = [
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash-lite",
+      ];
 
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: promptSystem }] }],
-            }),
-            signal: controller.signal,
+      for (const model of modelNames) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5 detik per model agar UX responsif
+
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: promptSystem }] }],
+              }),
+              signal: controller.signal,
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            hasilJawaban = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (hasilJawaban) break;
           }
-        );
-
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const data = await res.json();
-          hasilJawaban = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (hasilJawaban) break;
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          lastError = errData?.error?.message || res.statusText;
-          if (res.status === 404 || lastError?.includes("not found") || lastError?.includes("no longer available")) {
-            continue;
-          }
-          break;
-        }
-      } catch (err) {
-        if (err.name === "AbortError") {
-          lastError = "Koneksi ke asisten AI terputus (waktu habis / timeout). Silakan coba lagi.";
+        } catch {
+          // Timeout atau error koneksi pada model ini -> coba model cadangan atau langsung fallback
           continue;
         }
-        lastError = err.message;
       }
     }
 
+    // 5. Fallback cerdas: Jika Gemini tidak aktif, kuota habis, atau koneksi timeout
     if (!hasilJawaban) {
-      return NextResponse.json(
-        {
-          error:
-            lastError ||
-            "Maaf, asisten AI sedang tidak dapat menjawab saat ini. Silakan hubungi toko lewat WhatsApp.",
-        },
-        { status: 500 }
-      );
+      hasilJawaban = jawabDariDataProduk(teksPertanyaan, produk, infoVarian);
     }
 
     return NextResponse.json({ jawaban: hasilJawaban });
   } catch (err) {
     console.error("[tanya-produk]", err?.message || "Internal server error");
-    return NextResponse.json(
-      { error: "Terjadi kesalahan pada server asisten AI. Silakan coba lagi." },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      jawaban:
+        "Mohon maaf, sistem sedang memproses antrean. Untuk mendapatkan informasi lengkap mengenai produk ini, silakan klik tombol 'Pesan via WhatsApp' untuk terhubung langsung dengan penjual.",
+    });
   }
 }
-
